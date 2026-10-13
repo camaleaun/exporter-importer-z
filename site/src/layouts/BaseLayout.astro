@@ -1,0 +1,122 @@
+---
+/**
+ * Every page: head (title, description, canonical, social cards, icons,
+ * the one font, preloaded), skip link, header, main, footer.
+ */
+import interUrl from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+import Footer from '@components/Footer.astro';
+import Header from '@components/Header.astro';
+import { alternates, defaultLocale, localeOf, t } from '@libs/i18n';
+import { site, url } from '@libs/site';
+import '../styles/global.scss';
+
+interface Props {
+	title?: string;
+	description?: string;
+	/** JSON-LD for the page, besides the site's. */
+	schema?: Record< string, unknown >;
+}
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale );
+const { title, description = strings.site.description, schema } = Astro.props;
+const fullTitle = title ? `${ title } · ${ site.name }` : `${ site.name }: ${ strings.site.tagline }`;
+// The same page in the other languages, when there are any.
+const languages = alternates( Astro.url.pathname );
+// First visit only: an English page sends a browser that prefers one of the
+// translations (navigator.languages, by primary subtag) to that version. The
+// choice is then remembered, and a click on a language link replaces it, so
+// it never happens again. Translated pages never redirect: their links are
+// shared on purpose.
+const languageChoice = {
+	here: locale.code,
+	redirect: locale.code === defaultLocale.code,
+	pages: Object.fromEntries( languages.map( ( item ) => [ item.locale.lang.split( '-' )[ 0 ].toLowerCase(), [ item.locale.code, item.href ] ] ) ),
+};
+const canonical = new URL( Astro.url.pathname, Astro.site );
+const ogImage = new URL( url( 'og-image.png' ), Astro.site );
+const fontFace = `@font-face{font-family:"Inter Variable";font-style:normal;font-display:swap;font-weight:100 900;src:url(${ interUrl }) format("woff2-variations");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD,U+2190,U+2192}`;
+const jsonLd = schema ?? {
+	'@context': 'https://schema.org',
+	'@type': 'WebSite',
+	name: site.name,
+	url: new URL( url(), Astro.site ).href,
+	inLanguage: locale.lang,
+};
+---
+
+<!doctype html>
+<html lang={ locale.lang }>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{ fullTitle }</title>
+		<meta name="description" content={ description } />
+		<link rel="canonical" href={ canonical } />
+		{
+			languages.length > 1 &&
+				languages.map( ( item ) => <link rel="alternate" hreflang={ item.locale.lang } href={ new URL( item.href, Astro.site ) } /> )
+		}
+		{ languages.length > 1 && <link rel="alternate" hreflang="x-default" href={ new URL( languages[ 0 ].href, Astro.site ) } /> }
+		<link rel="preload" href={ interUrl } as="font" type="font/woff2" crossorigin />
+		<style set:html={ fontFace }></style>
+		<link rel="icon" href={ url( 'favicon.svg' ) } type="image/svg+xml" />
+		<link rel="apple-touch-icon" href={ url( 'apple-touch-icon.png' ) } />
+		<link rel="sitemap" href={ url( 'sitemap-index.xml' ) } />
+		<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)" />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content={ site.name } />
+		<meta property="og:locale" content={ locale.og } />
+		{ languages.filter( ( item ) => item.locale.code !== locale.code ).map( ( item ) => <meta property="og:locale:alternate" content={ item.locale.og } /> ) }
+		<meta property="og:title" content={ fullTitle } />
+		<meta property="og:description" content={ description } />
+		<meta property="og:url" content={ canonical } />
+		<meta property="og:image" content={ ogImage } />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content={ `${ site.name }: ${ strings.site.tagline }` } />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="generator" content={ Astro.generator } />
+		<link rel="alternate" type="text/plain" href={ url( 'llms.txt' ) } title="llms.txt" />
+		<script type="application/ld+json" set:html={ JSON.stringify( jsonLd ) } />
+		{
+			languages.length > 1 && (
+				<script is:inline define:vars={ { choice: languageChoice } }>
+					try {
+						const key = 'eizport-language';
+						if ( ! localStorage.getItem( key ) ) {
+							const preferred = ( navigator.languages || [ navigator.language ] )
+								.map( ( lang ) => choice.pages[ String( lang ).split( '-' )[ 0 ].toLowerCase() ] )
+								.find( Boolean );
+							const code = preferred ? preferred[ 0 ] : choice.here;
+							localStorage.setItem( key, code );
+							if ( choice.redirect && code !== choice.here ) {
+								location.replace( preferred[ 1 ] + location.hash );
+							}
+						}
+						document.addEventListener( 'click', ( event ) => {
+							const link = event.target.closest && event.target.closest( 'a[data-locale]' );
+							if ( link ) localStorage.setItem( key, link.dataset.locale );
+						} );
+					} catch {}
+				</script>
+			)
+		}
+		<slot name="head" />
+	</head>
+	<body>
+		<a class="skip-link" href="#main">{ strings.layout.skip }</a>
+		<Header />
+		<main id="main" tabindex="-1">
+			<slot />
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	main:focus {
+		outline: none;
+	}
+</style>

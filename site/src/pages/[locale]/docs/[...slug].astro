@@ -1,0 +1,28 @@
+---
+/**
+ * Each Markdown docs page in each translated language: the translation, or
+ * the English page with a notice until there is one.
+ */
+import type { InferGetStaticPropsType } from 'astro';
+import DocsEntry from '../../../views/DocsEntry.astro';
+import { docsEntries, translatedEntries } from '@libs/docs';
+import { translatedLocales } from '@libs/i18n';
+
+export async function getStaticPaths() {
+	const entries = await docsEntries();
+	const paths = [];
+	for ( const locale of translatedLocales() ) {
+		const translations = await translatedEntries( locale );
+		for ( const entry of entries ) {
+			paths.push( { params: { locale: locale.code, slug: entry.id }, props: { entry, translation: translations.get( entry.id ) } } );
+		}
+	}
+	return paths;
+}
+
+type Props = InferGetStaticPropsType< typeof getStaticPaths >;
+
+const { entry, translation } = Astro.props;
+---
+
+<DocsEntry entry={ entry } translation={ translation } />

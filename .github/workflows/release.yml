@@ -1,0 +1,102 @@
+name: Release
+
+# Runs on the X.Y.Z (or X.Y.Z-pre) tag that bin/release.php
+# pushes (`eizport release`). A pre-release is still the latest release, so
+# the download link below keeps working.
+# Builds the zip from `git archive` (.gitattributes export-ignore decides what
+# ships) plus the JS build (build/ is not in git), publishes it on the GitHub
+# release twice — versioned, and as eizport.zip so
+# releases/latest/download/eizport.zip always works (demo
+# blueprint) — and, once WordPress.org approves the plugin and the WPORG_DEPLOY
+# repository variable is "true", deploys the same files to its SVN.
+
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+', '[0-9]+.[0-9]+.[0-9]+-*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Build the JS
+        run: npm ci && npm run build --if-present
+
+      - name: Version matches the tag
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          header=$(sed -n 's/^ \* Version: *//p' eizport.php)
+          constant=$(sed -n "s/^const VERSION = '\(.*\)';$/\1/p" eizport.php)
+          stable=$(sed -n 's/^Stable tag: *//p' readme.txt)
+          echo "tag=$tag header=$header constant=$constant stable=$stable"
+          [ "$header" = "$tag" ] && [ "$constant" = "$tag" ] && [ "$stable" = "$tag" ]
+
+      - name: Build the plugin zip
+        id: zip
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          mkdir -p /tmp/out
+          git archive HEAD --prefix=eizport/ | tar xf - -C /tmp/out/
+          # build/ is .gitignore'd, so git archive leaves it out: add the fresh build.
+          if [ -d build ]; then cp -r build /tmp/out/eizport/build; fi
+          find /tmp/out -name '*.map' -delete
+          cd /tmp/out
+          zip -qr "eizport.${tag}.zip" eizport
+          cp "eizport.${tag}.zip" eizport.zip
+          unzip -l eizport.zip | tail -n +4 | head -n -2 | awk '{print $4}'
+          echo "files=/tmp/out/eizport.${tag}.zip,/tmp/out/eizport.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes from readme.txt
+        run: |
+          # The version's entry in the readme's Changelog. It replaces the
+          # release's text on every run (generated notes would pile up when a
+          # tag is moved and the workflow runs again).
+          awk -v v="= ${GITHUB_REF_NAME} =" '/^== Changelog ==/ { c = 1; next } c && $0 == v { p = 1; next } p && /^(= |== )/ { exit } p { print }' readme.txt > /tmp/notes.md
+          cat /tmp/notes.md
+          [ -s /tmp/notes.md ]
+
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.zip.outputs.files }}
+          body_path: /tmp/notes.md
+          # Even a pre-release: it is what releases/latest/download/eizport.zip serves.
+          prerelease: false
+          make_latest: true
+
+  wporg:
+    # Off until the plugin is approved: set the repository variable
+    # WPORG_DEPLOY to "true" and the secrets SVN_USERNAME / SVN_PASSWORD.
+    if: vars.WPORG_DEPLOY == 'true'
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Build the JS
+        run: npm ci && npm run build --if-present
+
+      # Copies the working tree minus .distignore to trunk/ and tags/X.Y.Z,
+      # and .wordpress-org/ to the SVN assets/ (banners, icons, screenshots,
+      # blueprints/blueprint.json for Live Preview).
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: eizport
+          ASSETS_DIR: .wordpress-org

@@ -1,0 +1,25 @@
+---
+/**
+ * A Markdown docs page: the translation when there is one, else the English
+ * page (DocsLayout then says it isn't translated). Routes:
+ * pages/docs/[...slug].astro and pages/[locale]/docs/[...slug].astro.
+ */
+import type { CollectionEntry } from 'astro:content';
+import { render } from 'astro:content';
+import DocsLayout from '@layouts/DocsLayout.astro';
+
+interface Props {
+	/** The English page. */
+	entry: CollectionEntry< 'docs' >;
+	/** Its translation in the page's language, if any. */
+	translation?: CollectionEntry< 'docsI18n' >;
+}
+
+const { entry, translation } = Astro.props;
+const shown = translation ?? entry;
+const { Content, headings } = await render( shown );
+---
+
+<DocsLayout title={ shown.data.title } description={ shown.data.description } slug={ entry.id } headings={ headings } toc={ shown.data.toc }>
+	<Content />
+</DocsLayout>

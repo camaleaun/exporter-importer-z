@@ -1,0 +1,91 @@
+---
+/** The docs' navigation, from src/data/sidebar.ts, in the page's language. */
+import Icon from './Icon.astro';
+import { sidebar } from '../data/sidebar';
+import { docsPagesIn } from '@libs/docs';
+import { localeOf } from '@libs/i18n';
+import { slugify } from '@libs/site';
+
+interface Props {
+	slug: string;
+	label: string;
+}
+
+const { slug, label } = Astro.props;
+const pages = docsPagesIn( localeOf( Astro.url.pathname ) );
+const pageOf = ( group: string, title: string ) =>
+	pages.find( ( page ) => page.slug === `${ slugify( group ) }/${ slugify( title ) }` )!;
+---
+
+<nav aria-label={ label }>
+	{
+		sidebar.map( ( group ) => (
+			<div class="group">
+				<p class="group__title">
+					<Icon name={ group.icon } size={ 18 } />
+					{ pageOf( group.title, group.pages[ 0 ].title ).group }
+				</p>
+				<ul>
+					{ group.pages.map( ( page ) => {
+						const target = pageOf( group.title, page.title );
+						return (
+							<li>
+								<a href={ target.href } aria-current={ target.slug === slug ? 'page' : undefined }>
+									{ target.title }
+								</a>
+							</li>
+						);
+					} ) }
+				</ul>
+			</div>
+		) )
+	}
+</nav>
+
+<style>
+	.group + .group {
+		margin-top: var(--eiz-space-4);
+	}
+
+	.group__title {
+		display: flex;
+		align-items: center;
+		gap: var(--eiz-space-2);
+		margin: 0 0 var(--eiz-space-1);
+		padding-inline: var(--eiz-space-2);
+		font-size: var(--eiz-text-sm);
+		font-weight: 650;
+
+		.icon {
+			color: var(--eiz-primary);
+		}
+	}
+
+	ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	a {
+		display: flex;
+		align-items: center;
+		min-height: var(--eiz-target);
+		padding-inline: calc(var(--eiz-space-2) + 26px) var(--eiz-space-2);
+		border-radius: var(--eiz-radius-sm);
+		color: var(--eiz-muted);
+		font-size: 0.9375rem;
+		text-decoration: none;
+
+		&:hover {
+			color: var(--eiz-ink);
+			background: var(--eiz-surface);
+		}
+
+		&[aria-current='page'] {
+			color: var(--eiz-primary-strong);
+			background: var(--eiz-primary-soft);
+			font-weight: 600;
+		}
+	}
+</style>

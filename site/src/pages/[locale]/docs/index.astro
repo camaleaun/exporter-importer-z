@@ -1,0 +1,9 @@
+---
+/** The docs' home in each translated language (translations.json). */
+import DocsHome from '../../../views/DocsHome.astro';
+import { localeParams } from '@libs/i18n';
+
+export const getStaticPaths = localeParams;
+---
+
+<DocsHome />

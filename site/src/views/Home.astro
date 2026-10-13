@@ -1,0 +1,1028 @@
+---
+/**
+ * The product's landing page, in the page's language: what it does, how,
+ * each feature with a screenshot, the formats, the plugins it works with,
+ * developers, phones, FAQ and
+ * the way in. Routes: pages/index.astro and pages/[locale]/index.astro.
+ */
+import type { ImageMetadata } from 'astro';
+import { Code } from 'astro:components';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Badge from '@components/Badge.astro';
+import Button from '@components/Button.astro';
+import Icon from '@components/Icon.astro';
+import DemoVideo from '@components/DemoVideo.astro';
+import ForAgents from '@components/ForAgents.astro';
+import Screenshot from '@components/Screenshot.astro';
+import { defaultLocale, fill, href, localeOf, t } from '@libs/i18n';
+import { site, url } from '@libs/site';
+import { abilityExample, hookExample } from '../data/landing';
+import exportScreen from '@assets/screenshots/export-screen.webp';
+import itemsPanel from '@assets/screenshots/items-panel.webp';
+import optionsPanel from '@assets/screenshots/options-panel.webp';
+import playgroundOptions from '@assets/screenshots/playground-options.webp';
+import bundlePlugin from '@assets/screenshots/bundle-plugin.webp';
+import settingsExport from '@assets/screenshots/settings-export.webp';
+import settingsCopies from '@assets/screenshots/settings-copies.webp';
+import exportMobile from '@assets/screenshots/export-mobile.webp';
+import classicMobile from '@assets/screenshots/classic-mobile.webp';
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale );
+const s = strings.home;
+const { agent, audiences, comparison, compatibility, features, finale, formats, hero, objections, pains, steps } = strings.landing;
+
+const schema = {
+	'@context': 'https://schema.org',
+	'@type': 'SoftwareApplication',
+	name: site.name,
+	description: strings.site.description,
+	inLanguage: locale.lang,
+	applicationCategory: 'DeveloperApplication',
+	operatingSystem: `WordPress ${ site.requires }+`,
+	softwareVersion: site.version,
+	license: 'https://www.gnu.org/licenses/gpl-2.0.html',
+	downloadUrl: site.download,
+	codeRepository: site.repo,
+	offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+};
+
+// Screenshots in the page's language when its translation has them
+// (scripts/translations.mjs puts them in src/assets/i18n/<code>/), else English.
+const translated = import.meta.glob< ImageMetadata >( '../assets/i18n/*/screenshots/*.webp', { eager: true, import: 'default' } );
+const inLanguage = ( id: string, english: ImageMetadata ): ImageMetadata =>
+	translated[ `../assets/i18n/${ locale.code }/screenshots/${ id }.webp` ] ?? english;
+const shots: Record< string, ImageMetadata > = {
+	'export-screen': inLanguage( 'export-screen', exportScreen ),
+	'items-panel': inLanguage( 'items-panel', itemsPanel ),
+	'options-panel': inLanguage( 'options-panel', optionsPanel ),
+	'playground-options': inLanguage( 'playground-options', playgroundOptions ),
+	'bundle-plugin': inLanguage( 'bundle-plugin', bundlePlugin ),
+	'settings-export': inLanguage( 'settings-export', settingsExport ),
+	'settings-copies': inLanguage( 'settings-copies', settingsCopies ),
+	'export-mobile': inLanguage( 'export-mobile', exportMobile ),
+	'classic-mobile': inLanguage( 'classic-mobile', classicMobile ),
+};
+---
+
+<BaseLayout schema={ schema }>
+	{ locale.code === defaultLocale.code && <link slot="head" rel="alternate" type="text/markdown" href={ url( 'index.md' ) } title={ strings.layout.markdown } /> }
+	<section class="hero" aria-labelledby="hero-title">
+		<div class="container hero__inner">
+			<div class="hero__text">
+				<p class="hero__badges">
+					<Badge tone="accent">v{ site.version }</Badge>
+					<span>{ fill( s.badges, { requires: site.requires } ) }</span>
+				</p>
+				<h1 id="hero-title">{ hero.title }</h1>
+				<p class="hero__lead">{ hero.lead }</p>
+				<div class="hero__actions">
+					<Button href={ site.demo } icon="play" size="lg">{ hero.primary }</Button>
+					<Button href={ site.download } icon="export" variant="light" size="lg">{ hero.secondary }</Button>
+					<ForAgents />
+				</div>
+				<p class="hero__note">{ hero.note }</p>
+			</div>
+			<div class="hero__shot">
+				<DemoVideo label={ s.video } />
+			</div>
+		</div>
+	</section>
+
+	<section class="section pains" aria-labelledby="pains-title">
+		<div class="container">
+			<header class="section-head">
+				<p class="eyebrow">{ s.pains.eyebrow }</p>
+				<h2 id="pains-title">{ s.pains.title }</h2>
+			</header>
+			<ul class="pains__list">
+				{
+					pains.map( ( pain ) => (
+						<li class="pains__item">
+							<span class="pains__icon">
+								<Icon name={ pain.icon } size={ 24 } />
+							</span>
+							<h3>{ pain.title }</h3>
+							<p>{ pain.text }</p>
+						</li>
+					) )
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section class="section steps" aria-labelledby="steps-title">
+		<div class="container">
+			<header class="section-head">
+				<p class="eyebrow">{ s.steps.eyebrow }</p>
+				<h2 id="steps-title">{ s.steps.title }</h2>
+				<p class="lead">{ s.steps.lead }</p>
+			</header>
+			<ol class="steps__list">
+				{
+					steps.map( ( step, index ) => (
+						<li class="steps__item">
+							<span class="steps__icon">
+								<Icon name={ step.icon } size={ 28 } />
+							</span>
+							<span class="steps__number">{ fill( s.steps.step, { number: index + 1 } ) }</span>
+							<h3>{ step.title }</h3>
+							<p>{ step.text }</p>
+						</li>
+					) )
+				}
+			</ol>
+		</div>
+	</section>
+
+	<section class="section agent" aria-labelledby="agent-title">
+		<div class="container agent__inner">
+			<div>
+				<p class="eyebrow">{ s.agent.eyebrow }</p>
+				<h2 id="agent-title">{ agent.title }</h2>
+				<p class="lead">{ agent.text }</p>
+				<ul class="checks">
+					{ agent.points.map( ( point ) => (
+						<li>
+							<Icon name="check" size={ 20 } />
+							{ point }
+						</li>
+					) ) }
+				</ul>
+				<p class="agent__links">
+					<Button href={ href( locale, 'docs/developers/ai-agents/' ) } icon="sparkles">{ s.agent.button }</Button>
+					<a href={ url( 'llms.txt' ) }>llms.txt</a>
+				</p>
+			</div>
+			<figure class="chat">
+				<figcaption>{ s.agent.chat }</figcaption>
+				<ol>
+					{
+						agent.chat.map( ( message ) => (
+							<li class:list={ [ 'chat__message', 'tool' in message ? 'chat__message--agent' : 'chat__message--you' ] }>
+								<span class="chat__who">{ message.who }</span>
+								{ 'tool' in message && message.tool && (
+									<code class="chat__tool">
+										<span>{ message.tool }</span> { message.input }
+									</code>
+								) }
+								<p>{ message.text }</p>
+							</li>
+						) )
+					}
+				</ol>
+			</figure>
+		</div>
+	</section>
+
+	<section class="section why" aria-labelledby="why-title">
+		<div class="container">
+			<header class="section-head">
+				<p class="eyebrow">{ s.why.eyebrow }</p>
+				<h2 id="why-title">{ s.why.title }</h2>
+				<p class="lead">{ s.why.lead }</p>
+			</header>
+			<div class="table-wrap">
+				<table>
+					<caption>{ s.why.caption }</caption>
+					<thead>
+						<tr>
+							<td></td>
+							{ comparison.columns.map( ( column, index ) => <th scope="col" class:list={ { ours: index === 2 } }>{ column }</th> ) }
+						</tr>
+					</thead>
+					<tbody>
+						{
+							comparison.rows.map( ( row ) => (
+								<tr>
+									<th scope="row">{ row.label }</th>
+									{ row.cells.map( ( cell, index ) => <td class:list={ { ours: index === 2 } }>{ cell }</td> ) }
+								</tr>
+							) )
+						}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</section>
+
+	{
+		features.map( ( feature, index ) => (
+			<section class:list={ [ 'section feature', { 'feature--alt': index % 2 === 0 } ] } aria-labelledby={ `${ feature.id }-title` }>
+				<div class="container feature__inner">
+					<div class="feature__text">
+						<p class="eyebrow">{ feature.eyebrow }</p>
+						<h2 id={ `${ feature.id }-title` }>{ feature.title }</h2>
+						<p class="lead">{ feature.text }</p>
+						<ul class="checks">
+							{ feature.points.map( ( point ) => (
+								<li>
+									<Icon name="check" size={ 20 } />
+									{ point }
+								</li>
+							) ) }
+						</ul>
+						<a class="feature__more" href={ href( locale, feature.href ) }>
+							{ fill( s.more, { topic: feature.eyebrow.toLowerCase() } ) }
+							<Icon name="arrow" size={ 18 } />
+						</a>
+					</div>
+					<div class="feature__shot">
+						<Screenshot src={ shots[ feature.image ] } alt={ feature.alt } />
+					</div>
+				</div>
+			</section>
+		) )
+	}
+
+	<section class="section audiences" aria-labelledby="audiences-title">
+		<div class="container">
+			<header class="section-head">
+				<p class="eyebrow">{ s.audiences.eyebrow }</p>
+				<h2 id="audiences-title">{ s.audiences.title }</h2>
+			</header>
+			<ul class="audiences__list">
+				{
+					audiences.map( ( audience ) => (
+						<li>
+							<Icon name={ audience.icon } size={ 28 } />
+							<h3>{ audience.title }</h3>
+							<p>{ audience.text }</p>
+						</li>
+					) )
+				}
+			</ul>
+			<p class="audiences__cta">
+				<Button href={ site.demo } icon="play">{ hero.primary }</Button>
+			</p>
+		</div>
+	</section>
+
+	<section class="section formats" aria-labelledby="formats-title">
+		<div class="container">
+			<header class="section-head">
+				<p class="eyebrow">{ s.formats.eyebrow }</p>
+				<h2 id="formats-title">{ s.formats.title }</h2>
+				<p class="lead">{ s.formats.lead }</p>
+			</header>
+			<div class="table-wrap">
+				<table>
+					<caption>{ s.formats.caption }</caption>
+					<thead>
+						<tr>
+							<th scope="col">{ s.formats.format }</th>
+							<th scope="col">{ s.formats.file }</th>
+							<th scope="col">{ s.formats.media }</th>
+							<th scope="col">{ s.formats.settings }</th>
+							<th scope="col">{ s.formats.html }</th>
+							<th scope="col">{ s.formats.use }</th>
+						</tr>
+					</thead>
+					<tbody>
+						{
+							formats.map( ( format ) => (
+								<tr>
+									<th scope="row">{ format.name }</th>
+									<td>
+										<code>{ format.file }</code>
+									</td>
+									{ [ format.media, format.settings, format.html ].map( ( has ) =>
+										has ? (
+											<td>
+												<Icon name="check" size={ 20 } label={ s.formats.yes } class="yes" />
+											</td>
+										) : (
+											<td>
+												<span class="no">{ s.formats.no }</span>
+											</td>
+										)
+									) }
+									<td>{ format.use }</td>
+								</tr>
+							) )
+						}
+					</tbody>
+				</table>
+			</div>
+			<p class="formats__more">
+				<a href={ href( locale, 'docs/formats/wxrz-bundle/' ) }>{ s.formats.more }</a>
+			</p>
+		</div>
+	</section>
+
+	<section class="section compat" aria-labelledby="compat-title">
+		<div class="container">
+			<header class="section-head">
+				<p class="eyebrow">{ s.compat.eyebrow }</p>
+				<h2 id="compat-title">{ s.compat.title }</h2>
+				<p class="lead">{ s.compat.lead }</p>
+			</header>
+			<ul class="compat__list">
+				{
+					compatibility.map( ( plugin ) => (
+						<li class:list={ [ 'compat__item', `compat__item--${ plugin.status }` ] }>
+							<h3>{ plugin.name }</h3>
+							<Badge tone={ plugin.status === 'supported' ? 'primary' : 'neutral' }>
+								{ plugin.status === 'supported' ? s.compat.supported : s.compat.unknown }
+							</Badge>
+							<ul class="checks">
+								{ plugin.points.map( ( point ) => (
+									<li>
+										<Icon name={ plugin.status === 'supported' ? 'check' : 'list' } size={ 20 } />
+										{ point }
+									</li>
+								) ) }
+							</ul>
+						</li>
+					) )
+				}
+			</ul>
+			<p class="compat__more">
+				<a href={ href( locale, 'docs/developers/compatibilities/' ) }>{ s.compat.more }</a>
+				<span aria-hidden="true"> · </span>
+				<a href={ `${ site.repo }/issues` }>{ s.compat.issue }</a>
+			</p>
+		</div>
+	</section>
+
+	<section class="section mobile" aria-labelledby="mobile-title">
+		<div class="container mobile__inner">
+			<div>
+				<p class="eyebrow">{ s.mobile.eyebrow }</p>
+				<h2 id="mobile-title">{ s.mobile.title }</h2>
+				<p class="lead">{ s.mobile.lead }</p>
+			</div>
+			<div class="mobile__shots">
+				<Screenshot src={ shots[ 'export-mobile' ] } alt={ s.mobile.newAlt } frame="phone" caption={ s.mobile.newCaption } />
+				<Screenshot src={ shots[ 'classic-mobile' ] } alt={ s.mobile.classicAlt } frame="phone" caption={ s.mobile.classicCaption } />
+			</div>
+		</div>
+	</section>
+
+	<section class="section devs" aria-labelledby="devs-title">
+		<div class="container">
+			<header class="section-head">
+				<p class="eyebrow">{ s.devs.eyebrow }</p>
+				<h2 id="devs-title">{ s.devs.title }</h2>
+				<p class="lead">{ s.devs.lead }</p>
+			</header>
+			<div class="devs__grid">
+				<figure>
+					<figcaption>{ s.devs.rest }</figcaption>
+					<Code code={ abilityExample } lang="bash" themes={ { light: 'github-light-high-contrast', dark: 'github-dark-high-contrast' } } />
+				</figure>
+				<figure>
+					<figcaption>{ s.devs.hook }</figcaption>
+					<Code code={ hookExample } lang="php" themes={ { light: 'github-light-high-contrast', dark: 'github-dark-high-contrast' } } />
+				</figure>
+			</div>
+			<p class="devs__links">
+				<a href={ href( locale, 'docs/developers/abilities/' ) }>{ s.devs.abilities }</a>
+				<a href={ href( locale, 'docs/developers/hooks/' ) }>{ s.devs.hooks }</a>
+				<a href={ href( locale, 'docs/developers/compatibilities/' ) }>{ s.devs.compatibilities }</a>
+				<a href={ href( locale, 'docs/developers/wp-cli/' ) }>{ s.devs.wpcli }</a>
+			</p>
+		</div>
+	</section>
+
+	<section class="section faq" aria-labelledby="faq-title">
+		<div class="container faq__inner">
+			<header>
+				<p class="eyebrow">{ s.faq.eyebrow }</p>
+				<h2 id="faq-title">{ s.faq.title }</h2>
+				<p>
+					<a href={ href( locale, 'docs/reference/faq/' ) }>{ s.faq.more }</a>
+				</p>
+			</header>
+			<div class="faq__list">
+				{
+					objections.map( ( item ) => (
+						<details>
+							<summary>{ item.question }</summary>
+							<p>{ item.answer }</p>
+						</details>
+					) )
+				}
+			</div>
+		</div>
+	</section>
+
+	<section class="cta" aria-labelledby="cta-title">
+		<div class="container cta__inner">
+			<h2 id="cta-title">{ finale.title }</h2>
+			<p>{ fill( s.cta.text, { finale: finale.text, requires: site.requires, version: site.version } ) }</p>
+			<div class="hero__actions">
+				<Button href={ site.download } icon="export" variant="light" size="lg">{ hero.secondary }</Button>
+				<Button href={ site.demo } icon="play" variant="light" size="lg">{ hero.primary }</Button>
+			</div>
+			<p class="cta__docs"><a href={ href( locale, 'docs/getting-started/introduction/' ) }>{ s.cta.docs }</a></p>
+		</div>
+	</section>
+</BaseLayout>
+
+<style lang="scss">
+	@use '../styles/mq' as *;
+
+	// Hero: the brand gradient, the screenshot rising out of it.
+	.hero {
+		position: relative;
+		overflow: hidden;
+		padding-top: var(--eiz-space-16);
+		color: #fff;
+		background:
+			radial-gradient(60rem 30rem at 85% -10%, rgb(242 153 74 / 0.22), transparent 60%),
+			linear-gradient(160deg, #1d35b4 0%, #142170 45%, #0f1115 100%);
+
+		@include break-medium {
+			padding-top: var(--eiz-space-24);
+		}
+	}
+
+	.hero__inner {
+		display: grid;
+		gap: var(--eiz-space-12);
+	}
+
+	.hero__text {
+		max-width: 50rem;
+	}
+
+	.hero__badges {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--eiz-space-3);
+		color: #c9d2ff;
+		font-size: var(--eiz-text-sm);
+	}
+
+	h1 {
+		color: #fff;
+	}
+
+	.hero__lead {
+		font-size: var(--eiz-text-lg);
+		color: #dfe4ff;
+		max-width: 62ch;
+	}
+
+	.hero__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--eiz-space-3);
+		margin-top: var(--eiz-space-8);
+	}
+
+	.hero__note {
+		margin-top: var(--eiz-space-3);
+		color: #b8c2f5;
+		font-size: var(--eiz-text-sm);
+	}
+
+	.hero__shot {
+		margin-bottom: calc(-1 * var(--eiz-space-12));
+
+		@include break-medium {
+			margin-bottom: calc(-1 * var(--eiz-space-24));
+		}
+	}
+
+	// Pains.
+	.pains__list,
+	.audiences__list {
+		display: grid;
+		gap: var(--eiz-space-6);
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.pains__list {
+		@include break-medium {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	.pains__item {
+		padding: var(--eiz-space-6);
+		border-radius: var(--eiz-radius-lg);
+		border: 1px solid light-dark(#f5c99e, #5b3a1c);
+		background: var(--eiz-accent-soft);
+
+		h3 {
+			font-size: 1.25rem;
+		}
+
+		p {
+			margin: 0;
+			color: var(--eiz-muted);
+		}
+	}
+
+	.pains__icon {
+		display: inline-grid;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		margin-bottom: var(--eiz-space-4);
+		border-radius: 12px;
+		background: var(--eiz-paper);
+		color: light-dark(#a1530c, #f6c089);
+	}
+
+	// Who it's for.
+	.audiences__list {
+		@include break-small {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		@include break-large {
+			grid-template-columns: repeat(4, 1fr);
+		}
+
+		li {
+			padding: var(--eiz-space-6);
+			border-top: 3px solid var(--eiz-primary);
+			background: var(--eiz-surface);
+			border-radius: 0 0 var(--eiz-radius) var(--eiz-radius);
+
+			:global(.icon) {
+				color: var(--eiz-primary);
+				margin-bottom: var(--eiz-space-3);
+			}
+		}
+
+		h3 {
+			font-size: 1.125rem;
+		}
+
+		p {
+			margin: 0;
+			color: var(--eiz-muted);
+		}
+	}
+
+	// Works with.
+	.compat__list {
+		display: grid;
+		gap: var(--eiz-space-6);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		@include break-medium {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	.compat__item {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--eiz-space-3);
+		padding: var(--eiz-space-6);
+		border: 1px solid var(--eiz-border);
+		border-top: 3px solid var(--eiz-border);
+		border-radius: 0 0 var(--eiz-radius) var(--eiz-radius);
+		background: var(--eiz-surface);
+
+		h3 {
+			margin: 0;
+			font-size: 1.125rem;
+		}
+
+		.checks {
+			margin: 0;
+		}
+	}
+
+	.compat__item--supported {
+		border-top-color: var(--eiz-primary);
+	}
+
+	// Not tested: what to expect, not a promise.
+	.compat__item--unknown .checks li :global(.icon) {
+		color: var(--eiz-muted);
+	}
+
+	.compat__more {
+		margin-top: var(--eiz-space-6);
+	}
+
+	.audiences__cta {
+		margin-top: var(--eiz-space-8);
+	}
+
+	// Steps.
+	.steps {
+		padding-top: calc(var(--eiz-space-24) + var(--eiz-space-8));
+
+		@include break-medium {
+			padding-top: calc(var(--eiz-space-24) * 2);
+		}
+	}
+
+	.steps__list {
+		display: grid;
+		gap: var(--eiz-space-6);
+		list-style: none;
+		margin: 0;
+		padding: 0;
+
+		@include break-medium {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	.steps__item {
+		position: relative;
+		padding: var(--eiz-space-8) var(--eiz-space-6);
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius-lg);
+		background: var(--eiz-paper);
+
+		p {
+			margin: 0;
+			color: var(--eiz-muted);
+		}
+	}
+
+	.steps__icon {
+		display: inline-grid;
+		place-items: center;
+		width: 56px;
+		height: 56px;
+		margin-bottom: var(--eiz-space-4);
+		border-radius: 16px;
+		background: var(--eiz-primary-soft);
+		color: var(--eiz-primary);
+	}
+
+	.steps__item:nth-child(2) .steps__icon {
+		background: var(--eiz-accent-soft);
+		color: light-dark(#a1530c, #f6c089);
+	}
+
+	.steps__number {
+		display: block;
+		color: var(--eiz-muted);
+		font-size: var(--eiz-text-sm);
+		font-weight: 600;
+	}
+
+	// Agent-first: text and an example conversation.
+	.agent {
+		color: #f0f0f1;
+		background:
+			radial-gradient(40rem 24rem at 90% 10%, rgb(56 88 233 / 0.35), transparent 60%),
+			#0f1115;
+
+		h2 {
+			color: #fff;
+		}
+
+		.lead {
+			color: #c9cdd3;
+		}
+
+		.eyebrow {
+			color: #a8b6ff;
+		}
+
+		.checks :global(.icon) {
+			color: #4ab866;
+		}
+	}
+
+	.agent__inner {
+		display: grid;
+		gap: var(--eiz-space-12);
+		align-items: center;
+
+		@include break-large {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+
+	.agent__links {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--eiz-space-4);
+
+		a:not(:global(.button)) {
+			display: inline-flex;
+			align-items: center;
+			min-height: var(--eiz-target);
+			color: #a8b6ff;
+			font-weight: 600;
+		}
+	}
+
+	.chat {
+		margin: 0;
+		padding: var(--eiz-space-6);
+		border: 1px solid #2e333b;
+		border-radius: var(--eiz-radius-lg);
+		background: #171a21;
+		box-shadow: var(--eiz-shadow-lg);
+
+		figcaption {
+			margin-bottom: var(--eiz-space-4);
+			color: #b7bbc0;
+			font-size: var(--eiz-text-sm);
+		}
+
+		ol {
+			display: grid;
+			gap: var(--eiz-space-4);
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+	}
+
+	.chat__message {
+		max-width: 92%;
+		padding: var(--eiz-space-3) var(--eiz-space-4);
+		border-radius: var(--eiz-radius);
+
+		p {
+			margin: 0;
+		}
+	}
+
+	.chat__message--you {
+		justify-self: end;
+		background: #3858e9;
+		color: #fff;
+	}
+
+	.chat__message--agent {
+		background: #232833;
+		color: #f0f0f1;
+	}
+
+	.chat__who {
+		display: block;
+		margin-bottom: var(--eiz-space-1);
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		opacity: 0.85;
+	}
+
+	.chat__tool {
+		display: block;
+		margin-bottom: var(--eiz-space-2);
+		padding: var(--eiz-space-2) var(--eiz-space-3);
+		border: 1px solid #3a404c !important;
+		border-radius: var(--eiz-radius-sm);
+		background: #0f1115 !important;
+		color: #c9cdd3;
+		font-size: 0.8125rem;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+
+		span {
+			color: #f6c089;
+			font-weight: 700;
+		}
+	}
+
+	// Why: the comparison, ours highlighted.
+	.why {
+		background: var(--eiz-surface);
+
+		.table-wrap {
+			background: var(--eiz-paper);
+		}
+
+		table {
+			min-width: 46rem;
+		}
+
+		.ours {
+			background: var(--eiz-primary-soft);
+			font-weight: 600;
+		}
+
+		thead .ours {
+			color: var(--eiz-primary-strong);
+		}
+	}
+
+	// Features: text and screenshot, alternating sides.
+	.feature--alt {
+		background: var(--eiz-surface);
+	}
+
+	.feature__inner {
+		display: grid;
+		gap: var(--eiz-space-12);
+		align-items: center;
+
+		@include break-large {
+			grid-template-columns: 5fr 7fr;
+		}
+	}
+
+	.feature--alt .feature__inner {
+		@include break-large {
+			grid-template-columns: 7fr 5fr;
+
+			.feature__text {
+				order: 2;
+			}
+		}
+	}
+
+	.checks {
+		list-style: none;
+		padding: 0;
+		margin: var(--eiz-space-6) 0;
+
+		li {
+			display: flex;
+			gap: var(--eiz-space-2);
+			align-items: flex-start;
+
+			:global(.icon) {
+				color: var(--eiz-success);
+				margin-top: 0.15em;
+			}
+		}
+
+		li + li {
+			margin-top: var(--eiz-space-2);
+		}
+	}
+
+	.feature__more {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--eiz-space-2);
+		min-height: var(--eiz-target);
+		font-weight: 600;
+	}
+
+	// Formats.
+	.table-wrap {
+		overflow-x: auto;
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius-lg);
+
+		table {
+			margin: 0;
+			min-width: 40rem;
+			font-size: var(--eiz-text);
+		}
+
+		caption {
+			padding: var(--eiz-space-4) var(--eiz-space-4) 0;
+		}
+
+		th,
+		td {
+			padding: var(--eiz-space-4);
+		}
+
+		tbody tr:last-child > * {
+			border-bottom: 0;
+		}
+	}
+
+	.yes {
+		color: var(--eiz-success);
+	}
+
+	.no {
+		color: var(--eiz-muted);
+	}
+
+	.formats__more {
+		margin-top: var(--eiz-space-4);
+	}
+
+	// Phones.
+	.mobile {
+		background: var(--eiz-surface);
+	}
+
+	.mobile__inner {
+		display: grid;
+		gap: var(--eiz-space-12);
+		align-items: center;
+
+		@include break-large {
+			grid-template-columns: 5fr 7fr;
+		}
+	}
+
+	.mobile__shots {
+		display: grid;
+		gap: var(--eiz-space-8);
+
+		@include break-small {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+
+	// Developers.
+	.devs__grid {
+		display: grid;
+		gap: var(--eiz-space-6);
+
+		@include break-large {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		figure {
+			margin: 0;
+			min-width: 0;
+		}
+
+		figcaption {
+			margin-bottom: var(--eiz-space-2);
+			font-weight: 600;
+		}
+	}
+
+	.devs__links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--eiz-space-2) var(--eiz-space-6);
+		margin-top: var(--eiz-space-6);
+
+		a {
+			display: inline-flex;
+			align-items: center;
+			min-height: var(--eiz-target);
+			font-weight: 600;
+		}
+	}
+
+	// FAQ.
+	.faq__inner {
+		display: grid;
+		gap: var(--eiz-space-8);
+
+		@include break-large {
+			grid-template-columns: 1fr 2fr;
+		}
+	}
+
+	.faq__list details {
+		border-bottom: 1px solid var(--eiz-border);
+		padding-block: var(--eiz-space-2);
+
+		summary {
+			display: flex;
+			align-items: center;
+			min-height: 48px;
+			font-weight: 600;
+			font-size: 1.0625rem;
+			cursor: pointer;
+		}
+
+		p {
+			color: var(--eiz-muted);
+		}
+	}
+
+	// Call to action.
+	.cta {
+		margin-top: var(--eiz-space-8);
+		color: #fff;
+		background: linear-gradient(135deg, #1d35b4, #0f1115);
+	}
+
+	.cta__inner {
+		padding-block: var(--eiz-space-16);
+		text-align: center;
+
+		h2 {
+			color: #fff;
+		}
+
+		p {
+			color: #dfe4ff;
+		}
+
+		.hero__actions {
+			justify-content: center;
+		}
+	}
+
+	.cta__docs {
+		margin: var(--eiz-space-4) 0 0;
+
+		a {
+			display: inline-flex;
+			align-items: center;
+			min-height: var(--eiz-target);
+			color: #fff;
+		}
+	}
+</style>

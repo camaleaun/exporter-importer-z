@@ -1,0 +1,155 @@
+---
+/**
+ * The people who keep the project free, by tier (src/data/supporters.ts).
+ * Until there are names, an invitation to be the first. Routes:
+ * pages/supporters.astro and pages/[locale]/supporters.astro.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import Icon from '@components/Icon.astro';
+import { donate } from '../data/donate';
+import { supporters, tiers } from '../data/supporters';
+import { fill, href, localeOf, t } from '@libs/i18n';
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale ).supporters;
+// Apoia.se's page is in Brazilian Portuguese: no note on a page already in it.
+const apoiaseNote = locale.lang !== 'pt-BR';
+
+const groups = tiers
+	.map( ( tier ) => ( { ...tier, people: supporters.filter( ( person ) => person.tier === tier.id ) } ) )
+	.filter( ( group ) => group.people.length > 0 );
+---
+
+<BaseLayout title={ strings.title } description={ strings.description }>
+	<header class="page-head">
+		<div class="container">
+			<p class="eyebrow">{ strings.eyebrow }</p>
+			<h1>{ strings.heading }</h1>
+			<p class="lead">{ strings.lead }</p>
+		</div>
+	</header>
+
+	<div class="container supporters">
+		{
+			groups.length > 0 ? (
+				groups.map( ( group ) => (
+					<section aria-labelledby={ `tier-${ group.id }` } class:list={ [ 'tier', `tier--${ group.id }` ] }>
+						<h2 id={ `tier-${ group.id }` }>
+							{ group.name } <span>{ fill( strings.perMonth, { amount: group.amount } ) }</span>
+						</h2>
+						<ul>
+							{ group.people.map( ( person ) => (
+								<li>{ person.url ? <a href={ person.url }>{ person.name }</a> : person.name }</li>
+							) ) }
+						</ul>
+					</section>
+				) )
+			) : (
+				<p class="empty">
+					<Icon name="heart" size={ 24 } />
+					<span>{ strings.empty }</span>
+				</p>
+			)
+		}
+
+		<section aria-labelledby="join-title" class="join">
+			<h2 id="join-title">{ strings.join }</h2>
+			<p>
+				{ strings.joinText }
+				{ apoiaseNote && (
+					<span class="lang">
+						<Icon name="globe" size={ 16 } />
+						{ strings.lang }
+					</span>
+				) }
+			</p>
+			<div class="join__actions">
+				{ donate.apoiase.url && (
+					<Button href={ donate.apoiase.url } icon="external" hreflang="pt-BR">
+						{ strings.apoiase }
+					</Button>
+				) }
+				<Button href={ href( locale, 'donate/' ) } variant="secondary">{ strings.other }</Button>
+			</div>
+		</section>
+	</div>
+</BaseLayout>
+
+<style lang="scss">
+	@use '../styles/mq' as *;
+
+	.page-head {
+		padding-block: var(--eiz-space-16) var(--eiz-space-8);
+		background: linear-gradient(180deg, var(--eiz-primary-soft), transparent);
+	}
+
+	.supporters section {
+		padding-block: var(--eiz-space-8);
+	}
+
+	.tier {
+		h2 span {
+			color: var(--eiz-muted);
+			font-size: var(--eiz-text-sm);
+			font-weight: 400;
+		}
+
+		ul {
+			display: grid;
+			gap: var(--eiz-space-2) var(--eiz-space-6);
+			list-style: none;
+			margin: 0;
+			padding: 0;
+
+			@include break-small {
+				grid-template-columns: repeat(2, 1fr);
+			}
+
+			@include break-medium {
+				grid-template-columns: repeat(3, 1fr);
+			}
+		}
+	}
+
+	.tier--playground li {
+		font-size: var(--eiz-text-lg);
+		font-weight: 600;
+	}
+
+	.empty {
+		display: flex;
+		align-items: center;
+		gap: var(--eiz-space-3);
+		margin-top: var(--eiz-space-8);
+		padding: var(--eiz-space-6);
+		border-radius: var(--eiz-radius-lg);
+		background: var(--eiz-surface);
+		color: var(--eiz-muted);
+
+		:global(.icon) {
+			color: var(--eiz-primary);
+		}
+	}
+
+	.join p {
+		color: var(--eiz-muted);
+	}
+
+	.lang {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--eiz-space-1);
+		padding: 0.125rem var(--eiz-space-2);
+		border-radius: var(--eiz-radius-sm);
+		background: var(--eiz-surface);
+		font-size: var(--eiz-text-sm);
+		white-space: nowrap;
+	}
+
+	.join__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--eiz-space-3);
+	}
+</style>

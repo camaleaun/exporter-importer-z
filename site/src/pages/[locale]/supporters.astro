@@ -1,0 +1,9 @@
+---
+/** The supporters page in each translated language (translations.json). */
+import Supporters from '../../views/Supporters.astro';
+import { localeParams } from '@libs/i18n';
+
+export const getStaticPaths = localeParams;
+---
+
+<Supporters />

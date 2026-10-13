@@ -1,0 +1,243 @@
+---
+/**
+ * Support the project: it is free, and support is what keeps it free.
+ * Only the options set in src/data/donate.ts show; Pix with its "copia e
+ * cola" code and a QR code made at build time. Plus ways to help without
+ * money. In another language, the options whose page is in that language
+ * come first, without the language note. Routes: pages/donate.astro and
+ * pages/[locale]/donate.astro.
+ */
+import QRCode from 'qrcode';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Button from '@components/Button.astro';
+import Icon from '@components/Icon.astro';
+import { donate, donateLinks, hasDonations, pixCode } from '../data/donate';
+import { fill, href, localeOf, t } from '@libs/i18n';
+import { site } from '@libs/site';
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale ).donate;
+const native = ( lang?: { code: string } ) => lang?.code === locale.lang;
+const links = donateLinks()
+	.map( ( link ) => ( {
+		...link,
+		text: strings.links[ link.id ]?.text ?? link.text,
+		audience: strings.links[ link.id ]?.audience ?? link.audience,
+		lang: link.lang && ! native( link.lang ) ? { ...link.lang, label: strings.links[ link.id ]?.lang ?? link.lang.label } : undefined,
+		first: native( link.lang ),
+	} ) )
+	.sort( ( a, b ) => Number( b.first ) - Number( a.first ) );
+const pix = donate.pix.key ? pixCode() : '';
+const pixSvg = pix ? await QRCode.toString( pix, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1e1e1e', light: '#ffffff' } } ) : '';
+
+const otherWays = (
+	[
+		{ icon: 'bookmark', href: site.repo },
+		{ icon: 'shield', href: site.issues },
+		{ icon: 'book', href: href( locale, 'docs/' ) },
+		{ icon: 'link', href: href( locale ) },
+	] as const
+).map( ( way, index ) => ( { ...way, ...strings.ways[ index ] } ) );
+---
+
+<BaseLayout title={ strings.title } description={ strings.description }>
+	<header class="page-head">
+		<div class="container">
+			<p class="eyebrow">{ strings.eyebrow }</p>
+			<h1>{ strings.heading }</h1>
+			<p class="lead">{ strings.lead }</p>
+		</div>
+	</header>
+
+	<div class="container donate">
+		<section aria-labelledby="money-title">
+			<h2 id="money-title">{ strings.money }</h2>
+			{
+				hasDonations() ? (
+					<ul class="options">
+						{ links.map( ( link ) => (
+							<li class="option">
+								<h3>{ link.name }</h3>
+								<p>{ link.text }</p>
+								<p class="option__where">{ link.audience }</p>
+								{ link.lang && (
+									<p class="option__lang">
+										<Icon name="globe" size={ 16 } />
+										{ link.lang.label }
+									</p>
+								) }
+								<Button href={ link.url } icon="external" hreflang={ link.lang?.code }>
+									{ fill( strings.with, { name: link.name } ) }
+								</Button>
+							</li>
+						) ) }
+						{ pix && (
+							<li class="option option--pix">
+								<h3>Pix</h3>
+								<p>{ strings.pixText }</p>
+								<div class="pix__qr" role="img" aria-label={ strings.pixQr } set:html={ pixSvg } />
+								<label for="pix-code">{ strings.pixCode }</label>
+								<input id="pix-code" class="pix__code" type="text" readonly value={ pix } />
+								<p class="option__where">{ fill( strings.pixWhere, { name: donate.pix.name } ) }</p>
+							</li>
+						) }
+					</ul>
+				) : (
+					<p class="pending">{ strings.pending }</p>
+				)
+			}
+			<p class="note" set:html={ fill( strings.note, { supporters: `<a href="${ href( locale, 'supporters/' ) }">${ strings.supportersLink }</a>` } ) } />
+		</section>
+
+		<section aria-labelledby="other-title">
+			<h2 id="other-title">{ strings.other }</h2>
+			<ul class="ways">
+				{
+					otherWays.map( ( way ) => (
+						<li>
+							<a href={ way.href }>
+								<Icon name={ way.icon } size={ 24 } />
+								<span>
+									<strong>{ way.title }</strong>
+									{ way.text }
+								</span>
+							</a>
+						</li>
+					) )
+				}
+			</ul>
+		</section>
+	</div>
+</BaseLayout>
+
+<style lang="scss">
+	@use '../styles/mq' as *;
+
+	.page-head {
+		padding-block: var(--eiz-space-16) var(--eiz-space-8);
+		background: linear-gradient(180deg, var(--eiz-primary-soft), transparent);
+	}
+
+	.donate section {
+		padding-block: var(--eiz-space-8);
+	}
+
+	.options,
+	.ways {
+		display: grid;
+		gap: var(--eiz-space-6);
+		list-style: none;
+		margin: 0 0 var(--eiz-space-6);
+		padding: 0;
+
+		@include break-medium {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		@include break-large {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	.option {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--eiz-space-2);
+		padding: var(--eiz-space-6);
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius-lg);
+
+		h3 {
+			margin: 0;
+		}
+
+		p {
+			margin: 0;
+			color: var(--eiz-muted);
+		}
+	}
+
+	.option__where {
+		font-size: var(--eiz-text-sm);
+	}
+
+	.option__lang {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--eiz-space-1);
+		padding: 0.125rem var(--eiz-space-2);
+		border-radius: var(--eiz-radius-sm);
+		background: var(--eiz-surface);
+		font-size: var(--eiz-text-sm);
+	}
+
+	.pix__qr {
+		width: 180px;
+		padding: var(--eiz-space-2);
+		background: #fff;
+		border-radius: var(--eiz-radius);
+
+		:global(svg) {
+			width: 100%;
+			height: auto;
+		}
+	}
+
+	.pix__code {
+		width: 100%;
+		min-height: var(--eiz-target);
+		padding-inline: var(--eiz-space-3);
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius-sm);
+		background: var(--eiz-surface);
+		color: var(--eiz-ink);
+		font-family: var(--eiz-mono);
+		font-size: var(--eiz-text-sm);
+	}
+
+	label {
+		font-weight: 600;
+		font-size: var(--eiz-text-sm);
+	}
+
+	.pending,
+	.note {
+		color: var(--eiz-muted);
+	}
+
+	.pending {
+		padding: var(--eiz-space-6);
+		border-radius: var(--eiz-radius-lg);
+		background: var(--eiz-surface);
+	}
+
+	.ways a {
+		display: flex;
+		gap: var(--eiz-space-4);
+		height: 100%;
+		padding: var(--eiz-space-6);
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius-lg);
+		color: var(--eiz-ink);
+		text-decoration: none;
+
+		&:hover {
+			border-color: var(--eiz-primary);
+		}
+
+		:global(.icon) {
+			color: var(--eiz-primary);
+		}
+
+		span {
+			display: grid;
+			gap: var(--eiz-space-1);
+			color: var(--eiz-muted);
+		}
+
+		strong {
+			color: var(--eiz-ink);
+		}
+	}
+</style>

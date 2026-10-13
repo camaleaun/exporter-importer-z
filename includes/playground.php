@@ -1,0 +1,586 @@
+<?php
+/**
+ * Playground .zip: a WordPress Playground blueprint bundle holding the
+ * export as a plain WXR, imported with Playground's own importWxr step.
+ *
+ * Layout:
+ *     blueprint.json      installs the plugins and themes, then imports the WXR
+ *     <name>.xml          the WXR
+ *     uploads/2026/10/…   optional: the attachment files; the importer's
+ *                         downloads are answered from them by a temporary
+ *                         must-use plugin the blueprint adds and removes
+ *     post_content/…      optional: each post's content as <slug>.html,
+ *                         put back into its item by the same plugin
+ *
+ * Settings (options) are written by the blueprint itself and set when the
+ * import ends, with their IDs mapped, by a second temporary plugin.
+ *     themes/<slug>.zip   optional: themes to install (a child theme brings
+ *                         its parent) that aren't in the WordPress.org directory
+ *     plugins/<slug>.zip  optional: plugins to install and activate, same
+ *
+ * Themes and plugins from the WordPress.org directory aren't in the .zip:
+ * the blueprint installs them from there, in the version this site has.
+ *
+ * Run it with `npx @wp-playground/cli server --blueprint=<name>.zip`, or
+ * open a copy kept on the site by link (see copies.php), to get a site
+ * with the exported content.
+ *
+ * @package Eizport
+ */
+
+namespace Eizport\Playground;
+
+use Eizport\Files;
+
+defined( 'ABSPATH' ) || exit;
+
+const BLUEPRINT = 'blueprint.json';
+
+/**
+ * Where the blueprint writes the attachment files inside Playground.
+ */
+const MEDIA_DIR = '/wordpress/wp-content/eizport-media'; // playground-media.php looks there too.
+
+/**
+ * The temporary must-use plugin that serves them to the importer.
+ */
+const MEDIA_PLUGIN = '/wordpress/wp-content/mu-plugins/eizport-media.php';
+
+/**
+ * Folder of the content files, in the .zip and in MEDIA_DIR.
+ */
+const CONTENT_FOLDER = \Eizport\Bundle\CONTENT_FOLDER;
+
+/**
+ * The temporary must-use plugin that sets the options (apply-options.php).
+ */
+const OPTIONS_PLUGIN = '/wordpress/wp-content/mu-plugins/eizport-options.php';
+
+/**
+ * Builds the Playground .zip in a temporary file, for the caller to send
+ * (and delete).
+ *
+ * @param string   $wxr      The WXR file.
+ * @param string   $wxr_name Its name inside the .zip.
+ * @param string[] $themes   Stylesheets of the themes to add (parents are added).
+ * @param string[] $plugins  Plugin files (as get_plugins() keys) to add.
+ * @param bool     $media    Whether to add the attachment files.
+ * @param array    $content  Content files: name => `stream` and `item`, as
+ *                           Bundle\collect_content() keeps them.
+ * @param array    $options  The options file's data, or null.
+ * @return string|false The .zip.
+ */
+function build_zip( $wxr, $wxr_name, $themes = array(), $plugins = array(), $media = false, $content = array(), $options = null ) {
+	$files = array();
+	if ( $media ) {
+		$handle = Files\open_read( $wxr );
+		if ( $handle ) {
+			$files = \Eizport\Bundle\media_files( $handle );
+			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		}
+	}
+
+	$zip     = Files\temp_file( 'eizport-playground' );
+	$entries = array(
+		BLUEPRINT => array(
+			'data' => wp_json_encode(
+				blueprint( $wxr_name, $themes, $plugins, wp_list_pluck( $files, 'entry' ), wp_list_pluck( $content, 'item' ), $options ),
+				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+			),
+		),
+		$wxr_name => array( 'path' => $wxr ),
+	);
+	foreach ( $files as $file ) {
+		$entries[ $file['entry'] ] = array( 'path' => $file['path'] );
+	}
+	foreach ( $content as $name => $file ) {
+		rewind( $file['stream'] );
+		$entries[ CONTENT_FOLDER . '/' . $name ] = array( 'data' => (string) stream_get_contents( $file['stream'] ) );
+	}
+
+	// Only what the blueprint can't take from the WordPress.org directory.
+	$parts = array();
+	foreach ( with_parent_themes( $themes ) as $stylesheet ) {
+		if ( '' === directory_theme_zip( $stylesheet ) ) {
+			$parts[ theme_zip( $stylesheet ) ] = theme_entries( $stylesheet );
+		}
+	}
+	foreach ( $plugins as $plugin ) {
+		if ( '' === directory_plugin_zip( $plugin ) ) {
+			$parts[ plugin_zip( $plugin ) ] = other_plugin_entries( $plugin );
+		}
+	}
+
+	$ok    = true;
+	$temps = array( $zip );
+	foreach ( $parts as $name => $part_entries ) {
+		$part    = Files\temp_file( 'eizport-part' );
+		$temps[] = $part;
+		$ok      = $ok && $part_entries && create_zip( $part, $part_entries );
+
+		$entries[ $name ] = array( 'path' => $part );
+	}
+	$ok = $ok && create_zip( $zip, $entries );
+
+	array_map( 'wp_delete_file', $ok ? array_slice( $temps, 1 ) : $temps );
+
+	return $ok ? $zip : false;
+}
+
+/**
+ * The blueprint: installs the chosen plugins and themes (from the .zip),
+ * activates a theme, then imports the WXR with Playground's importWxr step.
+ * With attachment files or content files, they are written into
+ * Playground first, with a must-use plugin that answers the importer's
+ * downloads from the attachment files and puts each content file into its
+ * item; both are removed after the import.
+ *
+ * The theme activated is this site's, when it was chosen; else the first
+ * one chosen. Parents of child themes are installed too.
+ *
+ * @param string   $wxr_name Name of the WXR inside the .zip.
+ * @param string[] $themes   Stylesheets of the themes chosen.
+ * @param string[] $plugins  Plugin files of the plugins in the .zip.
+ * @param string[] $files    Attachment URL => file in the .zip ("uploads/…").
+ * @param array    $content  Content file name ("<slug>.html", in
+ *                           post_content/) => item: original `id`, `type`
+ *                           and `slug`.
+ * @param array    $options  The options file's data, or null.
+ * @return array
+ */
+function blueprint( $wxr_name, $themes = array(), $plugins = array(), $files = array(), $content = array(), $options = null ) {
+	$steps = array();
+	foreach ( $plugins as $plugin ) {
+		$directory = directory_plugin_zip( $plugin );
+		$steps[]   = array(
+			'step'       => 'installPlugin',
+			'pluginData' => '' !== $directory
+				? array(
+					'resource' => 'wordpress.org/plugins',
+					'slug'     => $directory,
+				)
+				: array(
+					'resource' => 'bundled',
+					'path'     => '/' . plugin_zip( $plugin ),
+				),
+		);
+	}
+
+	$all      = with_parent_themes( $themes );
+	$activate = theme_to_activate( array_intersect( $themes, $all ) );
+	$themes   = $all;
+	// Parents before children, the activated theme last.
+	$rank = function ( $stylesheet ) use ( $activate ) {
+		return $stylesheet === $activate ? 2 : (int) (bool) wp_get_theme( $stylesheet )->parent();
+	};
+	usort(
+		$themes,
+		function ( $a, $b ) use ( $rank ) {
+			return $rank( $a ) - $rank( $b );
+		}
+	);
+	foreach ( $themes as $stylesheet ) {
+		$directory = directory_theme_zip( $stylesheet );
+		$steps[]   = array(
+			'step'      => 'installTheme',
+			'themeData' => '' !== $directory
+				? array(
+					'resource' => 'wordpress.org/themes',
+					'slug'     => $directory,
+				)
+				: array(
+					'resource' => 'bundled',
+					'path'     => '/' . theme_zip( $stylesheet ),
+				),
+			'options'   => array( 'activate' => $stylesheet === $activate ),
+		);
+	}
+
+	$entries = array_merge( array_values( $files ), preg_filter( '#^#', CONTENT_FOLDER . '/', array_keys( $content ) ) );
+	$temp    = $entries || $options;
+	if ( $temp ) {
+		// writeFile doesn't create folders.
+		$folders = array_unique( array_merge( array( dirname( MEDIA_PLUGIN ) ), array_map( 'dirname', preg_filter( '#^#', MEDIA_DIR . '/', $entries ) ) ) );
+		foreach ( $folders as $folder ) {
+			$steps[] = array(
+				'step' => 'mkdir',
+				'path' => $folder,
+			);
+		}
+		foreach ( $entries as $entry ) {
+			$steps[] = array(
+				'step' => 'writeFile',
+				'path' => MEDIA_DIR . '/' . $entry,
+				'data' => array(
+					'resource' => 'bundled',
+					'path'     => '/' . $entry,
+				),
+			);
+		}
+		if ( $files ) {
+			$steps[] = array(
+				'step' => 'writeFile',
+				'path' => MEDIA_DIR . '/map.json',
+				'data' => wp_json_encode( $files, JSON_UNESCAPED_SLASHES ),
+			);
+		}
+		if ( $content ) {
+			$steps[] = array(
+				'step' => 'writeFile',
+				'path' => MEDIA_DIR . '/content.json',
+				'data' => wp_json_encode( $content, JSON_UNESCAPED_SLASHES ),
+			);
+		}
+		if ( $options ) {
+			$steps[] = array(
+				'step' => 'writeFile',
+				'path' => MEDIA_DIR . '/' . \Eizport\Options\FILE,
+				'data' => wp_json_encode( $options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ),
+			);
+			$steps[] = array(
+				'step' => 'writeFile',
+				'path' => OPTIONS_PLUGIN,
+				'data' => options_plugin_code(),
+			);
+		}
+		$steps[] = array(
+			'step' => 'writeFile',
+			'path' => MEDIA_PLUGIN,
+			'data' => media_plugin_code(),
+		);
+	}
+
+	$steps[] = array(
+		'step' => 'importWxr',
+		'file' => array(
+			'resource' => 'bundled',
+			'path'     => '/' . $wxr_name,
+		),
+	);
+
+	if ( $temp ) {
+		if ( $options ) {
+			$steps[] = array(
+				'step' => 'rm',
+				'path' => OPTIONS_PLUGIN,
+			);
+		}
+		$steps[] = array(
+			'step' => 'rm',
+			'path' => MEDIA_PLUGIN,
+		);
+		$steps[] = array(
+			'step' => 'rmdir',
+			'path' => MEDIA_DIR,
+		);
+	}
+
+	$blueprint = array(
+		'$schema'     => 'https://playground.wordpress.net/blueprint-schema.json',
+		'landingPage' => '/',
+		'login'       => true,
+		'steps'       => $steps,
+	);
+
+	/**
+	 * Filters the Playground blueprint of an export.
+	 *
+	 * @param array  $blueprint Blueprint.
+	 * @param string $wxr_name  Name of the WXR inside the .zip.
+	 */
+	return apply_filters( 'eizport_playground_blueprint', $blueprint, $wxr_name );
+}
+
+/**
+ * Code of the temporary must-use plugin (includes/playground-media.php):
+ * answers the importer's attachment downloads from the files the blueprint
+ * wrote to MEDIA_DIR, and puts the content files into their items.
+ *
+ * @return string
+ */
+function media_plugin_code() {
+	return (string) file_get_contents( __DIR__ . '/playground-media.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+}
+
+/**
+ * Code of the temporary must-use plugin that sets the options
+ * (includes/apply-options.php).
+ *
+ * @return string
+ */
+function options_plugin_code() {
+	return (string) file_get_contents( __DIR__ . '/apply-options.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+}
+
+/**
+ * The themes, each followed by its parent when it is a child theme.
+ *
+ * @param string[] $themes Stylesheets.
+ * @return string[]
+ */
+function with_parent_themes( $themes ) {
+	$all = array();
+	foreach ( $themes as $stylesheet ) {
+		$theme = wp_get_theme( $stylesheet );
+		if ( ! $theme->exists() ) {
+			continue;
+		}
+		$all[] = $theme->get_stylesheet();
+		if ( $theme->parent() ) {
+			$all[] = $theme->parent()->get_stylesheet();
+		}
+	}
+
+	return array_values( array_unique( $all ) );
+}
+
+/**
+ * The theme the blueprint activates, among the ones chosen (not the parents
+ * added for them): this site's theme, when chosen; else the first one.
+ *
+ * @param string[] $themes Stylesheets chosen.
+ * @return string Stylesheet, or '' to keep Playground's default.
+ */
+function theme_to_activate( $themes ) {
+	$themes = array_values( array_filter( $themes, 'is_string' ) );
+
+	return in_array( get_stylesheet(), $themes, true ) ? get_stylesheet() : ( $themes[0] ?? '' );
+}
+
+/**
+ * Name of a theme's .zip inside the Playground .zip.
+ *
+ * @param string $stylesheet Stylesheet.
+ * @return string
+ */
+function theme_zip( $stylesheet ) {
+	return 'themes/' . sanitize_file_name( $stylesheet ) . '.zip';
+}
+
+/**
+ * Name of a plugin's .zip inside the Playground .zip.
+ *
+ * @param string $plugin Plugin file.
+ * @return string
+ */
+function plugin_zip( $plugin ) {
+	return 'plugins/' . sanitize_file_name( plugin_slug( $plugin ) ) . '.zip';
+}
+
+/**
+ * A plugin's file in the WordPress.org directory, in the version this site
+ * has — "woocommerce.11.2.1.zip", which Playground's wordpress.org/plugins
+ * resource downloads as is — or '' when it isn't from the directory (custom,
+ * private, premium) and goes in the .zip.
+ *
+ * @param string $plugin Plugin file.
+ * @return string
+ */
+function directory_plugin_zip( $plugin ) {
+	$item    = directory_item( 'plugins', $plugin );
+	$version = (string) ( plugin_choices()[ $plugin ]['Version'] ?? '' );
+	$slug    = $item && 0 === strpos( (string) ( $item['id'] ?? '' ), 'w.org/plugins/' ) ? (string) ( $item['slug'] ?? '' ) : '';
+
+	return directory_zip( $slug, $version, 'plugin', $plugin );
+}
+
+/**
+ * A theme's file in the WordPress.org directory, in the version this site
+ * has ("twentytwentyfive.1.3.zip"), or '' when it goes in the .zip.
+ *
+ * @param string $stylesheet Stylesheet.
+ * @return string
+ */
+function directory_theme_zip( $stylesheet ) {
+	$item    = directory_item( 'themes', $stylesheet );
+	$theme   = wp_get_theme( $stylesheet );
+	$version = $theme->exists() ? (string) $theme->get( 'Version' ) : '';
+	$slug    = $item && 0 === strpos( (string) ( $item['package'] ?? '' ), 'https://downloads.wordpress.org/theme/' ) ? (string) ( $item['theme'] ?? '' ) : '';
+
+	return directory_zip( $slug, $version, 'theme', $stylesheet );
+}
+
+/**
+ * "<slug>.<version>.zip", when both are plain enough for a download URL.
+ *
+ * @param string $slug    Directory slug, or ''.
+ * @param string $version Installed version.
+ * @param string $type    "plugin" or "theme".
+ * @param string $id      Plugin file or stylesheet.
+ * @return string
+ */
+function directory_zip( $slug, $version, $type, $id ) {
+	$zip = preg_match( '/^[a-z0-9-]+$/', $slug ) && preg_match( '/^[0-9A-Za-z.+-]+$/', $version ) ? $slug . '.' . $version . '.zip' : '';
+
+	/**
+	 * Filters the WordPress.org file a Playground .zip installs a theme or
+	 * plugin from ("woocommerce.11.2.1.zip"); '' puts it in the .zip.
+	 *
+	 * @param string $zip  Directory file, or ''.
+	 * @param string $type "plugin" or "theme".
+	 * @param string $id   Plugin file or stylesheet.
+	 */
+	return (string) apply_filters( 'eizport_playground_from_directory', $zip, $type, $id );
+}
+
+/**
+ * What WordPress's own update check knows of an installed plugin or theme
+ * from the WordPress.org directory (the update_plugins / update_themes
+ * transients), or null when it isn't from there. A check that hasn't run
+ * yet, or doesn't know the item, runs once (core's wp_update_plugins() /
+ * wp_update_themes(), as Dashboard → Updates does).
+ *
+ * @param string $kind "plugins" or "themes".
+ * @param string $id   Plugin file or stylesheet.
+ * @return array|null
+ */
+function directory_item( $kind, $id ) {
+	static $refreshed = array();
+
+	$find = function () use ( $kind, $id ) {
+		$updates = get_site_transient( 'update_' . $kind );
+		if ( ! is_object( $updates ) ) {
+			return array( null, false );
+		}
+		foreach ( array( 'response', 'no_update' ) as $list ) {
+			if ( isset( $updates->{$list}[ $id ] ) ) {
+				return array( (array) $updates->{$list}[ $id ], true );
+			}
+		}
+		return array( null, isset( $updates->checked[ $id ] ) );
+	};
+
+	list( $item, $known ) = $find();
+	if ( ! $known && empty( $refreshed[ $kind ] ) ) {
+		$refreshed[ $kind ] = true;
+		require_once ABSPATH . WPINC . '/update.php';
+		'plugins' === $kind ? wp_update_plugins() : wp_update_themes();
+		list( $item ) = $find();
+	}
+
+	return $item;
+}
+
+/**
+ * "akismet/akismet.php" → "akismet"; "hello.php" → "hello".
+ *
+ * @param string $plugin Plugin file.
+ * @return string
+ */
+function plugin_slug( $plugin ) {
+	return false === strpos( $plugin, '/' ) ? basename( $plugin, '.php' ) : dirname( $plugin );
+}
+
+/**
+ * Themes that can go in the .zip: stylesheet => theme.
+ *
+ * @return \WP_Theme[]
+ */
+function theme_choices() {
+	return wp_get_themes( array( 'errors' => false ) );
+}
+
+/**
+ * Plugins that can go in the .zip: every installed plugin.
+ *
+ * @return array<string, array> Plugin file => plugin data.
+ */
+function plugin_choices() {
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+
+	return get_plugins();
+}
+
+/**
+ * A theme's files for its .zip.
+ *
+ * @param string $stylesheet Stylesheet.
+ * @return array<string, array{path: string}>
+ */
+function theme_entries( $stylesheet ) {
+	$theme = wp_get_theme( $stylesheet );
+
+	return $theme->exists() ? folder_entries( $theme->get_stylesheet_directory(), $theme->get_stylesheet() ) : array();
+}
+
+/**
+ * Another plugin's files for its .zip: its folder, or its single file.
+ *
+ * @param string $plugin Plugin file.
+ * @return array<string, array{path: string}>
+ */
+function other_plugin_entries( $plugin ) {
+	if ( ! array_key_exists( $plugin, plugin_choices() ) ) {
+		return array();
+	}
+	$path = WP_PLUGIN_DIR . '/' . $plugin;
+	if ( false === strpos( $plugin, '/' ) ) {
+		return is_file( $path ) ? array( $plugin => array( 'path' => $path ) ) : array();
+	}
+
+	return folder_entries( dirname( $path ), plugin_slug( $plugin ) );
+}
+
+/**
+ * Every file in a folder, under `<slug>/`, leaving out hidden files and
+ * version control and dependency folders.
+ *
+ * @param string $dir  Folder.
+ * @param string $slug Folder name in the .zip.
+ * @return array<string, array{path: string}>
+ */
+function folder_entries( $dir, $slug ) {
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+
+	$entries = array();
+	foreach ( (array) list_files( $dir, 100, array( 'node_modules' ) ) as $path ) {
+		if ( is_file( $path ) ) {
+			$entries[ $slug . substr( $path, strlen( $dir ) ) ] = array( 'path' => $path );
+		}
+	}
+	ksort( $entries );
+
+	return $entries;
+}
+
+/**
+ * Creates a .zip, with ZipArchive or else core's PclZip.
+ *
+ * @param string                                             $target  File to create (replaced).
+ * @param array<string, array{path?: string, data?: string}> $entries Name in the .zip => file path or data.
+ * @return bool
+ */
+function create_zip( $target, $entries ) {
+	wp_delete_file( $target );
+
+	if ( class_exists( 'ZipArchive' ) ) {
+		$zip = new \ZipArchive();
+		if ( true !== $zip->open( $target, \ZipArchive::CREATE ) ) {
+			return false;
+		}
+		foreach ( $entries as $name => $entry ) {
+			$added = isset( $entry['path'] ) ? $zip->addFile( $entry['path'], $name ) : $zip->addFromString( $name, (string) $entry['data'] );
+			if ( ! $added ) {
+				$zip->close();
+				return false;
+			}
+		}
+		return $zip->close();
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/class-pclzip.php';
+	$list = array();
+	foreach ( $entries as $name => $entry ) {
+		$list[] = isset( $entry['path'] )
+			? array(
+				PCLZIP_ATT_FILE_NAME          => $entry['path'],
+				PCLZIP_ATT_FILE_NEW_FULL_NAME => $name,
+			)
+			: array(
+				PCLZIP_ATT_FILE_NAME    => $name,
+				PCLZIP_ATT_FILE_CONTENT => (string) $entry['data'],
+			);
+	}
+
+	return 0 !== ( new \PclZip( $target ) )->create( $list );
+}

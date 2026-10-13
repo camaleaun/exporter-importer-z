@@ -1,0 +1,189 @@
+---
+/**
+ * The demo video (scripts/video.mjs, video/STORYBOARD.md) as a cover: only
+ * the poster loads — a responsive AVIF/WebP picture, the hero's LCP — with a
+ * play button over it. The <video> (self-hosted MP4/WebM, English captions
+ * on by default) is created on click, so no video byte is fetched before.
+ * Without JavaScript, the button is a plain link to the MP4. In another
+ * language, its own recording (and captions, and poster) when the
+ * translation has one (scripts/translations.mjs → public/i18n/<code>/video/).
+ * Without a recording yet (public/video/demo.mp4), only the poster shows.
+ */
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { ImageMetadata } from 'astro';
+import { Picture } from 'astro:assets';
+import englishPoster from '@assets/video/demo-poster.webp';
+import { defaultLocale, fill, localeOf, t } from '@libs/i18n';
+import { url } from '@libs/site';
+
+interface Props {
+	label: string;
+}
+
+const { label } = Astro.props;
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale ).video;
+// The language's own video, when its translation has one; else English with English captions.
+const own = locale.code !== defaultLocale.code && existsSync( resolve( process.cwd(), `public/i18n/${ locale.code }/video/demo.mp4` ) );
+const playable = own || existsSync( resolve( process.cwd(), 'public/video/demo.mp4' ) );
+const base = own ? `i18n/${ locale.code }/video/` : 'video/';
+const captions = own ? { vtt: `demo.${ locale.code }.vtt`, lang: locale.lang, label: locale.label } : { vtt: 'demo.en.vtt', lang: 'en', label: strings.captions };
+const posters = import.meta.glob< ImageMetadata >( '../assets/i18n/*/video/demo-poster.webp', { eager: true, import: 'default' } );
+// The language's own poster, even before its recording.
+const poster = posters[ `../assets/i18n/${ locale.code }/video/demo-poster.webp` ] || englishPoster;
+---
+
+<figure class="video">
+	<div class="video__frame">
+		<div class="video__bar" aria-hidden="true">
+			<span></span>
+			<span></span>
+			<span></span>
+		</div>
+		<div
+			class="video__stage"
+			data-demo-video={ playable ? '' : undefined }
+			data-mp4={ url( `${ base }demo.mp4` ) }
+			data-webm={ url( `${ base }demo.webm` ) }
+			data-vtt={ url( `${ base }${ captions.vtt }` ) }
+			data-lang={ captions.lang }
+			data-captions={ captions.label }
+		>
+			<Picture
+				src={ poster }
+				alt=""
+				formats={ [ 'avif', 'webp' ] }
+				widths={ [ 480, 720, 960, 1280, 1920 ] }
+				sizes="(min-width: 1280px) 1200px, calc(100vw - 2rem)"
+				loading="eager"
+				decoding="sync"
+				fetchpriority="high"
+				quality={ 70 }
+				class="video__poster"
+			/>
+			{
+				playable && (
+					<a class="video__play" href={ url( `${ base }demo.mp4` ) } aria-label={ fill( strings.play, { label } ) }>
+						<svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"></path></svg>
+						<span>{ strings.watch }</span>
+					</a>
+				)
+			}
+		</div>
+	</div>
+	<figcaption>{ label }</figcaption>
+</figure>
+
+<script>
+	// Swaps the poster for the video on the first click.
+	for ( const stage of document.querySelectorAll< HTMLElement >( '[data-demo-video]' ) ) {
+		stage.querySelector( '.video__play' )?.addEventListener( 'click', ( event ) => {
+			event.preventDefault();
+			const { mp4, webm, vtt, lang, captions } = stage.dataset;
+			const video = document.createElement( 'video' );
+			Object.assign( video, { controls: true, autoplay: true, playsInline: true, width: 1920, height: 1080 } );
+			video.className = 'video__player';
+			video.innerHTML = `<source src="${ webm }" type="video/webm"><source src="${ mp4 }" type="video/mp4"><track kind="captions" src="${ vtt }" srclang="${ lang }" label="${ captions }" default>`;
+			stage.replaceChildren( video );
+			video.play().catch( () => {} );
+			video.focus();
+		} );
+	}
+</script>
+
+<style>
+	.video {
+		margin: 0;
+	}
+
+	.video__frame {
+		overflow: hidden;
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius);
+		background: var(--eiz-paper);
+		box-shadow: var(--eiz-shadow-lg);
+	}
+
+	.video__bar {
+		display: flex;
+		gap: 6px;
+		padding: 10px 12px;
+		background: var(--eiz-surface);
+		border-bottom: 1px solid var(--eiz-border);
+
+		span {
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			background: var(--eiz-border);
+		}
+	}
+
+	.video__stage {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		background: #1d35b4;
+
+		:global(img),
+		:global(video) {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+	}
+
+	.video__play {
+		position: absolute;
+		inset: 0;
+		display: grid;
+		place-content: center;
+		justify-items: center;
+		gap: var(--eiz-space-3);
+		color: #fff;
+		font-weight: 650;
+		text-decoration: none;
+		background: linear-gradient(0deg, rgba(15, 17, 21, 0.45), rgba(15, 17, 21, 0.15));
+		transition: background-color 0.2s;
+
+		svg {
+			box-sizing: content-box;
+			padding: 22px 20px 22px 24px;
+			border-radius: 50%;
+			background: var(--eiz-primary);
+			box-shadow: 0 10px 30px rgba(29, 53, 180, 0.45);
+			transition: transform 0.2s;
+		}
+
+		span {
+			padding: 6px 14px;
+			border-radius: 999px;
+			background: rgba(15, 17, 21, 0.72);
+			font-size: var(--eiz-text-sm);
+		}
+
+		&:hover svg,
+		&:focus-visible svg {
+			transform: scale(1.08);
+		}
+
+		&:focus-visible {
+			outline: 3px solid var(--eiz-accent, #f2994a);
+			outline-offset: -6px;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.video__play svg {
+			transition: none;
+		}
+	}
+
+	figcaption {
+		margin-top: var(--eiz-space-3);
+		color: var(--eiz-muted);
+		font-size: var(--eiz-text-sm);
+		text-align: center;
+	}
+</style>

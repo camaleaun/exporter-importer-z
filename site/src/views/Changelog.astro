@@ -1,0 +1,37 @@
+---
+/**
+ * The changelog, from readme.txt: one section per version (in English: other
+ * languages show it with the "not translated yet" notice). Routes:
+ * pages/docs/reference/changelog.astro and its [locale] twin.
+ */
+import DocsLayout from '@layouts/DocsLayout.astro';
+import { fill, localeOf, t } from '@libs/i18n';
+import { changelog, site } from '@libs/site';
+
+const strings = t( localeOf( Astro.url.pathname ) ).docs.changelog;
+const versions = changelog();
+const headings = versions.map( ( item ) => ( { depth: 2, slug: `v${ item.version.replaceAll( '.', '-' ) }`, text: item.version } ) );
+---
+
+<DocsLayout
+	title={ strings.title }
+	description={ strings.description }
+	slug="reference/changelog"
+	status="missing"
+	headings={ headings.slice( 0, 8 ) }
+	editHref={ `${ site.repo }/edit/main/readme.txt` }
+>
+	<p set:html={ fill( strings.intro, { releases: `<a href="${ site.releases }">${ strings.releases }</a>`, version: site.version } ) } />
+	{
+		versions.map( ( item ) => (
+			<section>
+				<h2 id={ `v${ item.version.replaceAll( '.', '-' ) }` }>{ item.version }</h2>
+				<ul>
+					{ item.changes.map( ( change ) => (
+						<li set:html={ change } />
+					) ) }
+				</ul>
+			</section>
+		) )
+	}
+</DocsLayout>

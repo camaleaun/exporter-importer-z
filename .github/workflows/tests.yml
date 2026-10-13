@@ -1,0 +1,81 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  versions:
+    name: Versions agree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Header, constant and Stable tag
+        run: |
+          header=$(sed -n 's/^ \* Version: *//p' eizport.php)
+          constant=$(sed -n "s/^const VERSION = '\(.*\)';$/\1/p" eizport.php)
+          stable=$(sed -n 's/^Stable tag: *//p' readme.txt)
+          echo "header=$header constant=$constant stable=$stable"
+          [ -n "$header" ] && [ "$header" = "$constant" ] && [ "$header" = "$stable" ]
+
+  php:
+    name: Lint, PHPCS, PHPUnit and Plugin Check (wp-env)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install
+        run: |
+          composer install --no-interaction --prefer-dist
+          npm ci
+
+      - name: Lint and PHPCS
+        run: composer lint && composer phpcs
+
+      - name: Build the JS
+        run: npm run build --if-present
+
+      - name: Start WordPress (wp-env)
+        run: npx wp-env start
+
+      # The tests load the wp-env site (WP_LOAD) and never write to its database.
+      - name: PHPUnit
+        run: npx wp-env run tests-cli --env-cwd=wp-content/plugins/eizport bash -c 'WP_LOAD=/var/www/html/wp-load.php vendor/bin/phpunit'
+
+      # languages/eizport.pot must list every string (PHP and the built screens).
+      # Parsing the built screens needs more than the container's 128 MB of PHP memory.
+      - name: Translation template
+        run: npx wp-env run tests-cli --env-cwd=wp-content/plugins/eizport bash -c 'WP="php -d memory_limit=1G $(command -v wp)" bash bin/make-pot.sh --check'
+
+      - name: Plugin Check
+        run: |
+          npx wp-env run cli wp plugin install plugin-check --activate
+          # On what ships: the script leaves out what .distignore does.
+          bash bin/plugin-check.sh npx wp-env run cli wp
+
+  js:
+    name: JS lint and types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:js --if-present
+      - run: npm run check-types --if-present

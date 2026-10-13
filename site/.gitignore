@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+.lighthouse/
+/video/out/
+
+# Translations, downloaded by scripts/translations.mjs (translations.json).
+/.translations/
+/src/content/i18n/*
+!/src/content/i18n/.gitkeep
+/src/assets/i18n/
+/public/i18n/

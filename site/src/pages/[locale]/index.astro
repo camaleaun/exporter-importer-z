@@ -1,0 +1,9 @@
+---
+/** The landing page in each translated language (translations.json). */
+import Home from '../../views/Home.astro';
+import { localeParams } from '@libs/i18n';
+
+export const getStaticPaths = localeParams;
+---
+
+<Home />

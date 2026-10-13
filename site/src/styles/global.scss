@@ -1,0 +1,272 @@
+// Base styles: a small reset, type, links, code, tables and the layout
+// helpers every page shares. Mobile first; WordPress's breakpoints.
+@use "mq" as *;
+@use "tokens";
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+	scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	html {
+		scroll-behavior: smooth;
+	}
+}
+
+body {
+	margin: 0;
+	background: var(--eiz-paper);
+	color: var(--eiz-ink);
+	font-family: var(--eiz-font);
+	font-size: var(--eiz-text);
+	line-height: 1.6;
+	font-optical-sizing: auto;
+	-webkit-font-smoothing: antialiased;
+}
+
+img,
+svg,
+picture {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	margin: 0 0 var(--eiz-space-4);
+	line-height: 1.15;
+	letter-spacing: -0.02em;
+	font-weight: 700;
+	text-wrap: balance;
+}
+
+h1 {
+	font-size: var(--eiz-h1);
+	letter-spacing: -0.035em;
+}
+
+h2 {
+	font-size: var(--eiz-h2);
+}
+
+h3 {
+	font-size: var(--eiz-h3);
+}
+
+p,
+ul,
+ol,
+table,
+pre,
+dl,
+details {
+	margin: 0 0 var(--eiz-space-4);
+}
+
+p {
+	text-wrap: pretty;
+}
+
+a {
+	color: var(--eiz-primary);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.2em;
+
+	&:hover {
+		color: var(--eiz-primary-strong);
+		text-decoration-thickness: 2px;
+	}
+}
+
+:focus-visible {
+	outline: 2px solid var(--eiz-primary);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+code,
+kbd,
+pre {
+	font-family: var(--eiz-mono);
+	font-size: 0.9em;
+}
+
+:not(pre) > code {
+	padding: 0.1em 0.35em;
+	border-radius: var(--eiz-radius-sm);
+	background: var(--eiz-surface);
+	border: 1px solid var(--eiz-border);
+	overflow-wrap: anywhere;
+}
+
+pre {
+	padding: var(--eiz-space-4);
+	border-radius: var(--eiz-radius);
+	border: 1px solid var(--eiz-border);
+	overflow-x: auto;
+	line-height: 1.55;
+	font-size: var(--eiz-text-sm);
+}
+
+// Shiki's dual themes: inline colors are the light theme's; dark mode
+// switches to the --shiki-dark variables.
+@media (prefers-color-scheme: dark) {
+	.astro-code,
+	.astro-code span {
+		color: var(--shiki-dark) !important;
+		background-color: var(--shiki-dark-bg) !important;
+	}
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--eiz-text-sm);
+}
+
+caption {
+	text-align: start;
+	padding-bottom: var(--eiz-space-2);
+	color: var(--eiz-muted);
+}
+
+th,
+td {
+	padding: var(--eiz-space-3);
+	border-bottom: 1px solid var(--eiz-border);
+	text-align: start;
+	vertical-align: top;
+}
+
+th {
+	font-weight: 600;
+}
+
+hr {
+	border: 0;
+	border-top: 1px solid var(--eiz-border);
+	margin: var(--eiz-space-8) 0;
+}
+
+// Layout helpers.
+.container {
+	width: 100%;
+	max-width: calc(var(--eiz-width) + 2 * var(--eiz-gutter));
+	margin-inline: auto;
+	padding-inline: var(--eiz-gutter);
+}
+
+.visually-hidden {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.skip-link {
+	position: absolute;
+	inset-inline-start: var(--eiz-space-4);
+	top: -100px;
+	z-index: 100;
+	padding: var(--eiz-space-3) var(--eiz-space-4);
+	background: var(--eiz-paper);
+	color: var(--eiz-ink);
+	border-radius: var(--eiz-radius-sm);
+	box-shadow: var(--eiz-shadow);
+
+	&:focus {
+		top: var(--eiz-space-4);
+	}
+}
+
+.eyebrow {
+	display: inline-block;
+	margin-bottom: var(--eiz-space-3);
+	color: var(--eiz-primary);
+	font-size: var(--eiz-text-sm);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.lead {
+	font-size: var(--eiz-text-lg);
+	color: var(--eiz-muted);
+	max-width: 60ch;
+}
+
+.section {
+	padding-block: var(--eiz-space-16);
+
+	@include break-medium {
+		padding-block: var(--eiz-space-24);
+	}
+}
+
+.section-head {
+	max-width: 46rem;
+	margin-bottom: var(--eiz-space-12);
+}
+
+.prose {
+	max-width: var(--eiz-reading);
+
+	h2 {
+		margin-top: var(--eiz-space-12);
+		font-size: clamp(1.5rem, 1.3rem + 0.8vw, 1.875rem);
+	}
+
+	h3 {
+		margin-top: var(--eiz-space-8);
+		font-size: 1.25rem;
+	}
+
+	li + li {
+		margin-top: var(--eiz-space-1);
+	}
+
+	img {
+		border-radius: var(--eiz-radius);
+		border: 1px solid var(--eiz-border);
+	}
+
+	blockquote {
+		margin: 0 0 var(--eiz-space-4);
+		padding: var(--eiz-space-3) var(--eiz-space-4);
+		border-inline-start: 4px solid var(--eiz-primary);
+		background: var(--eiz-primary-soft);
+		border-radius: 0 var(--eiz-radius-sm) var(--eiz-radius-sm) 0;
+
+		p:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	.heading-anchor {
+		margin-inline-start: 0.35em;
+		color: var(--eiz-muted);
+		text-decoration: none;
+		opacity: 0;
+	}
+
+	:is(h2, h3):hover .heading-anchor,
+	.heading-anchor:focus {
+		opacity: 1;
+	}
+}

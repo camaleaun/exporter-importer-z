@@ -1,0 +1,71 @@
+---
+/** A note set apart from the text: note (info), tip or warning. */
+import Icon from './Icon.astro';
+
+interface Props {
+	type?: 'note' | 'tip' | 'warning';
+	title?: string;
+}
+
+const { type = 'note', title } = Astro.props;
+const icon = { note: 'bookmark', tip: 'sparkles', warning: 'shield' } as const;
+---
+
+<aside class:list={[ 'callout', `callout--${ type }` ]}>
+	<Icon name={ icon[ type ] } size={ 20 } />
+	<div>
+		{ title && <p class="callout__title">{ title }</p> }
+		<slot />
+	</div>
+</aside>
+
+<style>
+	.callout {
+		display: flex;
+		gap: var(--eiz-space-3);
+		padding: var(--eiz-space-4);
+		margin-bottom: var(--eiz-space-4);
+		border-radius: var(--eiz-radius);
+		border: 1px solid;
+
+		.icon {
+			margin-top: 0.15em;
+		}
+
+		:global(p:last-child) {
+			margin-bottom: 0;
+		}
+	}
+
+	.callout__title {
+		font-weight: 650;
+		margin-bottom: var(--eiz-space-1);
+	}
+
+	.callout--note {
+		background: var(--eiz-primary-soft);
+		border-color: light-dark(#c9d2fb, #2b3670);
+
+		.icon {
+			color: var(--eiz-primary);
+		}
+	}
+
+	.callout--tip {
+		background: light-dark(#edfaef, #12261a);
+		border-color: light-dark(#b8e6bf, #24502f);
+
+		.icon {
+			color: var(--eiz-success);
+		}
+	}
+
+	.callout--warning {
+		background: var(--eiz-accent-soft);
+		border-color: light-dark(#f5c99e, #5b3a1c);
+
+		.icon {
+			color: var(--eiz-warning);
+		}
+	}
+</style>

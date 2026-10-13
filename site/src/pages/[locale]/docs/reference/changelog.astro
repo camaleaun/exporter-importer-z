@@ -1,0 +1,9 @@
+---
+/** The changelog in each translated language (translations.json). */
+import Changelog from '../../../../views/Changelog.astro';
+import { localeParams } from '@libs/i18n';
+
+export const getStaticPaths = localeParams;
+---
+
+<Changelog />

@@ -1,0 +1,239 @@
+---
+/**
+ * The site header: logo, main navigation, the other languages, GitHub.
+ * Below 782px the links fold into a "Menu" disclosure (details/summary: no
+ * JavaScript).
+ */
+import Icon from './Icon.astro';
+import Logo from './Logo.astro';
+import { alternates, href, localeOf, t } from '@libs/i18n';
+import { site } from '@libs/site';
+import { hasDonations } from '../data/donate';
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale ).header;
+const links = [
+	{ label: strings.docs, href: href( locale, 'docs/' ) },
+	{ label: strings.agents, href: href( locale, 'docs/developers/ai-agents/' ) },
+	{ label: strings.changelog, href: href( locale, 'docs/reference/changelog/' ) },
+	// Only once a way to donate is set (src/data/donate.ts).
+	...( hasDonations() ? [ { label: strings.support, href: href( locale, 'donate/' ) } ] : [] ),
+];
+// This page in the other languages (none until a translation is downloaded).
+const languages = alternates( Astro.url.pathname ).filter( ( item ) => item.locale.code !== locale.code );
+const current = Astro.url.pathname;
+const isCurrent = ( target: string ) =>
+	current === target || ( target.endsWith( 'docs/' ) && current.startsWith( target ) && ! current.includes( 'changelog' ) && ! current.includes( 'ai-agents' ) );
+---
+
+<header class="header">
+	<div class="header__inner container">
+		<a class="header__home" href={ href( locale ) } aria-label={ strings.home }>
+			<Logo size={ 32 } />
+		</a>
+
+		<nav class="header__nav" aria-label={ strings.main }>
+			<ul>
+				{
+					links.map( ( link ) => (
+						<li>
+							<a href={ link.href } aria-current={ isCurrent( link.href ) ? 'page' : undefined }>
+								{ link.label }
+							</a>
+						</li>
+					) )
+				}
+				{
+					languages.map( ( item ) => (
+						<li>
+							<a class="header__lang" href={ item.href } hreflang={ item.locale.lang } lang={ item.locale.lang } data-locale={ item.locale.code }>
+								<Icon name="globe" size={ 18 } />
+								{ item.locale.label }
+							</a>
+						</li>
+					) )
+				}
+				<li>
+					<a class="header__github" href={ site.repo }>
+						<Icon name="github" size={ 20 } />
+						{ strings.github }
+					</a>
+				</li>
+			</ul>
+		</nav>
+
+		<details class="header__menu">
+			<summary>
+				<Icon name="menu" size={ 22 } />
+				{ strings.menu }
+			</summary>
+			<nav aria-label={ strings.main }>
+				<ul>
+					{
+						links.map( ( link ) => (
+							<li>
+								<a href={ link.href } aria-current={ isCurrent( link.href ) ? 'page' : undefined }>
+									{ link.label }
+								</a>
+							</li>
+						) )
+					}
+					{
+						languages.map( ( item ) => (
+							<li>
+								<a href={ item.href } hreflang={ item.locale.lang } lang={ item.locale.lang } data-locale={ item.locale.code }>
+									<Icon name="globe" size={ 18 } />
+									{ item.locale.label }
+								</a>
+							</li>
+						) )
+					}
+					<li>
+						<a href={ site.repo }>{ strings.github }</a>
+					</li>
+				</ul>
+			</nav>
+		</details>
+	</div>
+</header>
+
+<style lang="scss">
+	@use '../styles/mq' as *;
+
+	.header {
+		position: sticky;
+		top: 0;
+		z-index: 50;
+		background: color-mix(in srgb, var(--eiz-paper) 88%, transparent);
+		backdrop-filter: saturate(180%) blur(12px);
+		border-bottom: 1px solid var(--eiz-border);
+	}
+
+	.header__inner {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--eiz-space-4);
+		min-height: 64px;
+	}
+
+	.header__home {
+		display: inline-flex;
+		align-items: center;
+		min-height: var(--eiz-target);
+		color: var(--eiz-ink);
+		text-decoration: none;
+		font-size: 1.0625rem;
+
+		&:hover {
+			color: var(--eiz-ink);
+		}
+	}
+
+	ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	a[aria-current='page'] {
+		color: var(--eiz-primary);
+	}
+
+	.header__nav {
+		display: none;
+
+		@include break-medium {
+			display: block;
+		}
+
+		ul {
+			display: flex;
+			align-items: center;
+			gap: var(--eiz-space-1);
+		}
+
+		a {
+			display: inline-flex;
+			align-items: center;
+			gap: var(--eiz-space-2);
+			min-height: var(--eiz-target);
+			padding-inline: var(--eiz-space-3);
+			border-radius: var(--eiz-radius-sm);
+			color: var(--eiz-ink);
+			font-weight: 550;
+			font-size: 0.9375rem;
+			text-decoration: none;
+
+			&:hover {
+				background: var(--eiz-surface);
+			}
+		}
+
+		a[aria-current='page'] {
+			color: var(--eiz-primary);
+		}
+	}
+
+	.header__lang {
+		color: var(--eiz-muted) !important;
+	}
+
+	.header__github {
+		border: 1px solid var(--eiz-border);
+		margin-inline-start: var(--eiz-space-2);
+	}
+
+	.header__menu {
+		position: relative;
+		margin: 0;
+
+		@include break-medium {
+			display: none;
+		}
+
+		summary {
+			display: inline-flex;
+			align-items: center;
+			gap: var(--eiz-space-2);
+			min-height: var(--eiz-target);
+			padding-inline: var(--eiz-space-3);
+			border: 1px solid var(--eiz-border);
+			border-radius: var(--eiz-radius-sm);
+			font-weight: 600;
+			cursor: pointer;
+			list-style: none;
+
+			&::-webkit-details-marker {
+				display: none;
+			}
+		}
+
+		nav {
+			position: absolute;
+			inset-inline-end: 0;
+			top: calc(100% + 8px);
+			min-width: 14rem;
+			padding: var(--eiz-space-2);
+			background: var(--eiz-paper);
+			border: 1px solid var(--eiz-border);
+			border-radius: var(--eiz-radius);
+			box-shadow: var(--eiz-shadow-lg);
+		}
+
+		a {
+			display: flex;
+			align-items: center;
+			gap: var(--eiz-space-2);
+			min-height: 44px;
+			padding-inline: var(--eiz-space-3);
+			border-radius: var(--eiz-radius-sm);
+			color: var(--eiz-ink);
+			text-decoration: none;
+
+			&:hover {
+				background: var(--eiz-surface);
+			}
+		}
+	}
+</style>

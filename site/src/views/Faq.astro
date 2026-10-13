@@ -1,0 +1,32 @@
+---
+/**
+ * The FAQ, from readme.txt's "Frequently Asked Questions" (in English: other
+ * languages show it with the "not translated yet" notice). Routes:
+ * pages/docs/reference/faq.astro and pages/[locale]/docs/reference/faq.astro.
+ */
+import DocsLayout from '@layouts/DocsLayout.astro';
+import { localeOf, t } from '@libs/i18n';
+import { faq, site, slugify } from '@libs/site';
+
+const strings = t( localeOf( Astro.url.pathname ) ).docs.faq;
+const questions = faq();
+const headings = questions.map( ( item ) => ( { depth: 2, slug: slugify( item.question ), text: item.question } ) );
+---
+
+<DocsLayout
+	title={ strings.title }
+	description={ strings.description }
+	slug="reference/faq"
+	status="missing"
+	headings={ headings }
+	editHref={ `${ site.repo }/edit/main/readme.txt` }
+>
+	{
+		questions.map( ( item ) => (
+			<section>
+				<h2 id={ slugify( item.question ) }>{ item.question }</h2>
+				{ item.answer.map( ( paragraph ) => <p set:html={ paragraph } /> ) }
+			</section>
+		) )
+	}
+</DocsLayout>

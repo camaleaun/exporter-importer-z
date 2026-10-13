@@ -1,0 +1,348 @@
+---
+/**
+ * A docs page: the sidebar (a disclosure below 960px), the page with its
+ * title and description, "On this page" (from 1280px), previous/next and an
+ * edit link. Generated pages pass `editHref` (the readme's), and `status`
+ * "missing" in other languages. In another language, a page not translated
+ * yet is shown in English with a notice and a link to translate it; one
+ * whose English page changed since says so.
+ */
+import type { MarkdownHeading } from 'astro';
+import BaseLayout from './BaseLayout.astro';
+import DocsNav from '@components/DocsNav.astro';
+import Icon from '@components/Icon.astro';
+import { docsPages, docsPagesIn, neighbors } from '@libs/docs';
+import { defaultLocale, localeOf, pageStatus, t, translationEdit, type PageStatus } from '@libs/i18n';
+import { site } from '@libs/site';
+
+interface Props {
+	title: string;
+	description: string;
+	slug: string;
+	headings?: MarkdownHeading[];
+	toc?: boolean;
+	editHref?: string;
+	status?: PageStatus[ 'status' ];
+}
+
+const { title, description, slug, headings = [], toc = true, editHref } = Astro.props;
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale ).docs;
+const english = locale.code === defaultLocale.code;
+const status = Astro.props.status ?? pageStatus( locale, slug ).status;
+const { previous, next } = neighbors( slug, locale );
+const current = docsPagesIn( locale ).find( ( page ) => page.slug === slug );
+const englishHref = docsPages.find( ( page ) => page.slug === slug )?.href;
+const tocHeadings = headings.filter( ( heading ) => heading.depth >= 2 && heading.depth <= 3 );
+// English pages are edited here (or in the readme); translations in their repository.
+const edit = english || editHref ? ( editHref ?? `${ site.editBase }${ slug }.md` ) : translationEdit( locale, slug, status === 'missing' );
+const editLabel = ! english && ! editHref && status === 'missing' ? strings.translate : strings.edit;
+// English Markdown pages (not the generated ones) also exist as .md, for AI agents.
+const markdown = english && editHref === undefined && current ? `${ current.href.replace( /\/$/, '' ) }.md` : '';
+const schema = {
+	'@context': 'https://schema.org',
+	'@type': 'TechArticle',
+	headline: title,
+	description,
+	isPartOf: { '@type': 'WebSite', name: site.name },
+};
+---
+
+<BaseLayout title={ title } description={ description } schema={ schema }>
+	{ markdown && <link slot="head" rel="alternate" type="text/markdown" href={ markdown } title={ t( locale ).layout.markdown } /> }
+	<div class="docs container">
+		<details class="docs__menu">
+			<summary>
+				<span>{ strings.menu }</span>
+				<span class="docs__nav-current">{ current?.group } / { current?.title }</span>
+			</summary>
+			<DocsNav slug={ slug } label={ strings.navMenu } />
+		</details>
+		<div class="docs__nav">
+			<DocsNav slug={ slug } label={ strings.nav } />
+		</div>
+
+		<article class="docs__main">
+			<header class="docs__head">
+				<p class="eyebrow">{ current?.group }</p>
+				<h1>{ title }</h1>
+				<p class="lead">{ description }</p>
+			</header>
+			{
+				! english && status !== 'translated' && (
+					<p class="docs__notice" role="note">
+						<Icon name="globe" size={ 20 } />
+						<span>
+							{ status === 'missing' ? strings.notTranslated : strings.outdated }{ ' ' }
+							{ status === 'missing' ? (
+								<a href={ edit }>{ strings.translate }</a>
+							) : (
+								<a href={ englishHref } hreflang="en">
+									{ strings.original }
+								</a>
+							) }
+						</span>
+					</p>
+				)
+			}
+			<div class="prose" lang={ ! english && status === 'missing' ? 'en' : undefined }>
+				<slot />
+			</div>
+			<footer class="docs__foot">
+				<p class="docs__links">
+					{
+						edit && (
+							<a class="docs__edit" href={ edit }>
+								<Icon name="github" size={ 18 } />
+								{ editLabel }
+							</a>
+						)
+					}
+					{
+						markdown && (
+							<a class="docs__edit" href={ markdown }>
+								<Icon name="code" size={ 18 } />
+								{ strings.markdown }
+							</a>
+						)
+					}
+				</p>
+				<nav class="docs__pager" aria-label={ strings.pager }>
+					{
+						previous && (
+							<a class="docs__prev" href={ previous.href }>
+								<span>{ strings.previous }</span>
+								{ previous.title }
+							</a>
+						)
+					}
+					{
+						next && (
+							<a class="docs__next" href={ next.href }>
+								<span>{ strings.next }</span>
+								{ next.title }
+							</a>
+						)
+					}
+				</nav>
+			</footer>
+		</article>
+
+		{
+			toc && tocHeadings.length > 1 && (
+				<aside class="docs__toc" aria-labelledby="toc-title">
+					<h2 id="toc-title">{ strings.toc }</h2>
+					<ul>
+						{ tocHeadings.map( ( heading ) => (
+							<li class={ `depth-${ heading.depth }` }>
+								<a href={ `#${ heading.slug }` }>{ heading.text }</a>
+							</li>
+						) ) }
+					</ul>
+				</aside>
+			)
+		}
+	</div>
+</BaseLayout>
+
+<style lang="scss">
+	@use '../styles/mq' as *;
+
+	.docs {
+		display: grid;
+		gap: var(--eiz-space-8);
+		padding-block: var(--eiz-space-8) var(--eiz-space-12);
+
+		@include break-large {
+			grid-template-columns: 15rem minmax(0, 1fr);
+			gap: var(--eiz-space-12);
+
+			.docs__menu {
+				display: none;
+			}
+		}
+
+		@include break-wide {
+			grid-template-columns: 15rem minmax(0, 1fr) 13rem;
+		}
+	}
+
+	ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	// Sidebar: a disclosure below 960px, a sticky column from there.
+	.docs__menu {
+		margin: 0;
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius);
+		background: var(--eiz-surface);
+
+		@include break-large {
+			display: none;
+		}
+
+		summary {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			min-height: 48px;
+			padding: var(--eiz-space-3) var(--eiz-space-4);
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+		:global(nav) {
+			padding: 0 var(--eiz-space-2) var(--eiz-space-4);
+		}
+	}
+
+	.docs__nav {
+		display: none;
+
+		@include break-large {
+			display: block;
+			align-self: start;
+			position: sticky;
+			top: 5.5rem;
+			max-height: calc(100vh - 6.5rem);
+			overflow-y: auto;
+		}
+	}
+
+	.docs__nav-current {
+		color: var(--eiz-muted);
+		font-weight: 400;
+		font-size: var(--eiz-text-sm);
+	}
+
+	.docs__main {
+		min-width: 0;
+	}
+
+	.docs__head {
+		margin-bottom: var(--eiz-space-8);
+		padding-bottom: var(--eiz-space-6);
+		border-bottom: 1px solid var(--eiz-border);
+
+		h1 {
+			font-size: clamp(2rem, 1.6rem + 1.8vw, 3rem);
+		}
+
+		.lead {
+			margin-bottom: 0;
+		}
+	}
+
+	.docs__notice {
+		display: flex;
+		gap: var(--eiz-space-3);
+		margin-bottom: var(--eiz-space-8);
+		padding: var(--eiz-space-4);
+		border: 1px solid light-dark(#f5c99e, #5b3a1c);
+		border-radius: var(--eiz-radius);
+		background: var(--eiz-accent-soft);
+
+		:global(.icon) {
+			flex-shrink: 0;
+			margin-top: 0.15em;
+			color: var(--eiz-warning);
+		}
+	}
+
+	.docs__foot {
+		margin-top: var(--eiz-space-12);
+		padding-top: var(--eiz-space-6);
+		border-top: 1px solid var(--eiz-border);
+	}
+
+	.docs__links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--eiz-space-1) var(--eiz-space-6);
+		margin: 0;
+	}
+
+	.docs__edit {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--eiz-space-2);
+		min-height: var(--eiz-target);
+		color: var(--eiz-muted);
+		font-size: var(--eiz-text-sm);
+	}
+
+	.docs__pager {
+		display: grid;
+		gap: var(--eiz-space-4);
+		margin-top: var(--eiz-space-6);
+
+		@include break-small {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		a {
+			display: flex;
+			flex-direction: column;
+			gap: var(--eiz-space-1);
+			padding: var(--eiz-space-4);
+			border: 1px solid var(--eiz-border);
+			border-radius: var(--eiz-radius);
+			font-weight: 600;
+			text-decoration: none;
+
+			&:hover {
+				border-color: var(--eiz-primary);
+			}
+
+			span {
+				color: var(--eiz-muted);
+				font-size: var(--eiz-text-sm);
+				font-weight: 400;
+			}
+		}
+	}
+
+	.docs__next {
+		text-align: end;
+
+		@include break-small {
+			grid-column: 2;
+		}
+	}
+
+	.docs__toc {
+		display: none;
+		font-size: var(--eiz-text-sm);
+
+		@include break-wide {
+			display: block;
+			align-self: start;
+			position: sticky;
+			top: 5.5rem;
+		}
+
+		h2 {
+			font-size: var(--eiz-text-sm);
+			letter-spacing: 0;
+			margin-bottom: var(--eiz-space-2);
+		}
+
+		a {
+			display: block;
+			padding-block: var(--eiz-space-1);
+			color: var(--eiz-muted);
+			text-decoration: none;
+
+			&:hover {
+				color: var(--eiz-primary);
+			}
+		}
+
+		.depth-3 a {
+			padding-inline-start: var(--eiz-space-4);
+		}
+	}
+</style>

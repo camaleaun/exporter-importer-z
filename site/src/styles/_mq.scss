@@ -1,0 +1,5 @@
+// WordPress's breakpoints and media query mixins (@wordpress/base-styles):
+// 600 small, 782 medium (blocks' columns stack below), 960 large, 1280 wide.
+// Only Sass: safe to @use from any component.
+@forward "@wordpress/base-styles/breakpoints";
+@forward "@wordpress/base-styles/mixins" show break-small, break-medium, break-large, break-wide, break-huge;

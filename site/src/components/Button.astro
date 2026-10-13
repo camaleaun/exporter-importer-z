@@ -1,0 +1,109 @@
+---
+/**
+ * A link that looks like a button: primary (filled), secondary (outlined),
+ * or light (for dark bands). At least 40px high, like WordPress's controls.
+ */
+import Icon from './Icon.astro';
+
+interface Props {
+	href: string;
+	variant?: 'primary' | 'secondary' | 'light';
+	icon?: Parameters< typeof Icon >[ 0 ][ 'name' ];
+	size?: 'md' | 'lg';
+	/** The language of the page it leads to, when not English. */
+	hreflang?: string;
+}
+
+const { href, variant = 'primary', icon, size = 'md', hreflang } = Astro.props;
+---
+
+<a class:list={[ 'button', `button--${ variant }`, `button--${ size }` ]} href={ href } hreflang={ hreflang }>
+	{ icon && <Icon name={ icon } size={ 20 } /> }
+	<slot />
+</a>
+
+<style>
+	.button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		min-height: var(--eiz-target);
+		padding: 0.5rem 1.1rem;
+		border-radius: var(--eiz-radius-sm);
+		border: 1px solid transparent;
+		font-weight: 600;
+		font-size: 0.9375rem;
+		line-height: 1.2;
+		/* One line: when a row of buttons runs out of room, a button moves to the next row instead of breaking. */
+		white-space: nowrap;
+		text-decoration: none;
+		transition:
+			background-color 0.15s,
+			border-color 0.15s,
+			color 0.15s,
+			transform 0.15s;
+
+		&:hover {
+			text-decoration: none;
+			transform: translateY(-1px);
+		}
+	}
+
+	.button--lg {
+		min-height: 48px;
+		padding: 0.75rem 1.4rem;
+		font-size: 1rem;
+	}
+
+	.button--primary {
+		background: var(--eiz-primary);
+		color: var(--eiz-on-primary);
+
+		&:hover {
+			background: var(--eiz-primary-strong);
+			color: var(--eiz-on-primary);
+		}
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.button--primary {
+			background: #3858e9;
+
+			&:hover {
+				background: #2145e6;
+			}
+		}
+	}
+
+	.button--secondary {
+		border-color: var(--eiz-primary);
+		color: var(--eiz-primary);
+		background: transparent;
+
+		&:hover {
+			background: var(--eiz-primary-soft);
+			color: var(--eiz-primary-strong);
+		}
+	}
+
+	.button--light {
+		background: #fff;
+		color: #1d35b4;
+
+		&:hover {
+			background: #eef1fe;
+			color: #1d35b4;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.button {
+			transition: none;
+
+			&:hover {
+				transform: none;
+			}
+		}
+	}
+</style>

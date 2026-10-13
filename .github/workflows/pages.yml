@@ -1,0 +1,66 @@
+name: Site
+
+# Builds site/ (Astro) and publishes it at https://eizport.github.io/: the
+# built files are pushed to eizport/eizport.github.io (the organization's
+# Pages repository, served from its main branch) with a deploy key, the
+# SITE_DEPLOY_KEY secret. Edit the site here, never there.
+#
+# The site shows the released plugin: it is built from the "latest" tag,
+# which a release moves (bin/release.php), never from main, where docs of
+# unreleased changes wait. A release publishes it; so can a run by hand,
+# from another ref when asked.
+#
+# The translations (site/translations.json) are downloaded from their own
+# repositories at build time. Each of them sends a "translations"
+# repository_dispatch on push, which builds "latest" again with them.
+
+on:
+  push:
+    tags: [ latest ]
+  repository_dispatch:
+    types: [ translations ]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag, branch or commit to build
+        default: latest
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || 'latest' }}
+          # The whole history: a translated page is outdated when its English
+          # page changed after the commit it was translated from.
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npm run translations
+      - run: npm run check
+      - run: npm run build
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          deploy_key: ${{ secrets.SITE_DEPLOY_KEY }}
+          external_repository: eizport/eizport.github.io
+          publish_branch: main
+          publish_dir: site/dist
+          force_orphan: true
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          full_commit_message: Site from eizport/eizport@${{ inputs.ref || 'latest' }}

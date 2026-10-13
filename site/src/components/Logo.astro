@@ -1,0 +1,47 @@
+---
+/**
+ * The mark (a Z of two arrows: out on top, in at the bottom) and, unless
+ * `markOnly`, the wordmark in live text so it follows the page's color.
+ */
+interface Props {
+	size?: number;
+	markOnly?: boolean;
+	class?: string;
+}
+
+const { size = 32, markOnly = false, class: className } = Astro.props;
+---
+
+<span class:list={[ 'logo', className ]}>
+	<svg class="logo__mark" width={ size } height={ size } viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+		<rect width="64" height="64" rx="14" fill="#3858e9"></rect>
+		<g fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+			<path stroke="#fff" d="M20 14 14 20l6 6M14 20h32L18 44"></path>
+			<path stroke="#f2994a" d="M18 44h32m-6-6 6 6-6 6"></path>
+		</g>
+	</svg>
+	{
+		markOnly ? (
+			<span class="visually-hidden">Eizport</span>
+		) : (
+			<span class="logo__word">
+				Ei<span class="logo__z">z</span>port
+			</span>
+		)
+	}
+</span>
+
+<style>
+	.logo {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6em;
+		font-weight: 650;
+		letter-spacing: -0.02em;
+		white-space: nowrap;
+	}
+
+	.logo__z {
+		color: var(--eiz-primary);
+	}
+</style>

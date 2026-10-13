@@ -1,0 +1,58 @@
+// Design tokens: the brand's colors, type, space, radius and shadow as CSS
+// custom properties, light and dark (light-dark() follows the system).
+// Emitted once, by global.scss; breakpoints are in _mq.scss.
+
+:root {
+	color-scheme: light dark;
+
+	// Brand.
+	--eiz-primary: light-dark(#3858e9, #8297ff);
+	--eiz-primary-strong: light-dark(#1d35b4, #a8b6ff);
+	--eiz-primary-soft: light-dark(#eef1fe, #1b2245);
+	--eiz-accent: #f2994a;
+	--eiz-accent-soft: light-dark(#fdf0e4, #3a2716);
+	--eiz-on-primary: #ffffff;
+
+	// Neutrals (WordPress admin grays).
+	--eiz-ink: light-dark(#1e1e1e, #f0f0f1);
+	--eiz-muted: light-dark(#50575e, #b7bbc0);
+	--eiz-border: light-dark(#dcdcde, #2e333b);
+	--eiz-surface: light-dark(#f6f7f7, #171a21);
+	--eiz-paper: light-dark(#ffffff, #0f1115);
+	--eiz-night: #0f1115;
+
+	// Meaning.
+	--eiz-success: light-dark(#007017, #4ab866);
+	--eiz-warning: light-dark(#8a4d00, #f0b849);
+	--eiz-error: light-dark(#cc1818, #f86368);
+
+	// Type: Inter, then the system's.
+	--eiz-font: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	--eiz-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+	--eiz-text-sm: 0.875rem;
+	--eiz-text: 1rem;
+	--eiz-text-lg: clamp(1.125rem, 1.05rem + 0.35vw, 1.3125rem);
+	--eiz-h3: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+	--eiz-h2: clamp(1.75rem, 1.45rem + 1.4vw, 2.5rem);
+	--eiz-h1: clamp(2.25rem, 1.6rem + 3vw, 4rem);
+
+	// Space (4px steps), radius, shadow, widths.
+	--eiz-space-1: 0.25rem;
+	--eiz-space-2: 0.5rem;
+	--eiz-space-3: 0.75rem;
+	--eiz-space-4: 1rem;
+	--eiz-space-6: 1.5rem;
+	--eiz-space-8: 2rem;
+	--eiz-space-12: 3rem;
+	--eiz-space-16: 4rem;
+	--eiz-space-24: 6rem;
+	--eiz-radius-sm: 6px;
+	--eiz-radius: 12px;
+	--eiz-radius-lg: 20px;
+	--eiz-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.08);
+	--eiz-shadow-lg: 0 2px 6px rgb(0 0 0 / 0.08), 0 24px 64px rgb(15 17 21 / 0.18);
+	--eiz-width: 75rem;
+	--eiz-reading: 72ch;
+	--eiz-gutter: clamp(1rem, 0.6rem + 2vw, 2rem);
+	--eiz-target: 40px;
+}

@@ -1,0 +1,53 @@
+{
+    "name": "eizport/eizport",
+    "description": "Export and import WordPress content as .wxrz bundles.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Eizport",
+            "homepage": "https://eizport.github.io/"
+        }
+    ],
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "wp-coding-standards/wpcs": "^3",
+        "phpcompatibility/phpcompatibility-wp": "*",
+        "php-parallel-lint/php-parallel-lint": "^1",
+        "phpunit/phpunit": "^9.6",
+        "yoast/phpunit-polyfills": "^2"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "7.4.33"
+        }
+    },
+    "scripts": {
+        "lint": "parallel-lint --exclude vendor --exclude node_modules --exclude build .",
+        "phpcs": "phpcs",
+        "phpcbf": "phpcbf",
+        "test": "phpunit",
+        "make-pot": "bin/make-pot.sh",
+        "check-pot": "bin/make-pot.sh --check",
+        "check": [
+            "@lint",
+            "@phpcs",
+            "@test",
+            "@check-pot"
+        ]
+    },
+    "scripts-descriptions": {
+        "lint": "PHP syntax check of every file.",
+        "phpcs": "WordPress Coding Standards and PHP 7.4+ compatibility.",
+        "phpcbf": "Fix what PHPCS can fix automatically.",
+        "test": "PHPUnit tests (loads the WordPress site the plugin is installed in; set WP_LOAD for another).",
+        "make-pot": "Write languages/eizport.pot (PHP strings and the built screens': run npm run build first).",
+        "check-pot": "Fail when languages/eizport.pot is out of date.",
+        "check": "Lint, PHPCS, tests and the translation template."
+    }
+}

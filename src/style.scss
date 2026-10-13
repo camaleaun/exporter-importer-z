@@ -1,0 +1,291 @@
+// The only CSS the screen needs: the header row and the stage height, as in
+// Jetpack Forms and Gutenberg's Content Types (wp-dataviews-dataforms-pretty).
+@use "@wordpress/base-styles/variables";
+@use "@wordpress/base-styles/mixins";
+
+// When the admin menu is taller than the window, core lets the page scroll
+// to reach its end: only the menu moves, the screen stays in place.
+@include mixins.break-medium {
+	body:has(.eizport-page) #wpbody-content {
+		position: sticky;
+		top: variables.$admin-bar-height;
+	}
+}
+
+// Size the stage and the side panel to the viewport so DataViews scrolls
+// inside them (and its footer stays), not the admin page.
+.boot-layout__stage:has(.eizport-page),
+.boot-layout__inspector:has(.eizport-page) {
+	height: calc(100vh - #{variables.$admin-bar-height-big});
+
+	@include mixins.break-medium {
+		height: calc(100vh - #{variables.$admin-bar-height});
+	}
+}
+
+.eizport-header-row {
+	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+	padding-inline: 20px;
+	width: 100%;
+	box-sizing: border-box;
+	flex-shrink: 0;
+	overflow-x: auto;
+
+	> div:not(:empty) {
+		min-height: 48px;
+	}
+}
+
+.eizport-filters-row:not(:empty) {
+	padding: variables.$grid-unit-15 variables.$grid-unit-20 * 1.25;
+}
+
+.eizport-tab-count {
+	margin-inline-start: 4px;
+	vertical-align: middle;
+}
+
+// Forms: a centred column, as Content Types' "Add new post type".
+.eizport-form {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 680px;
+	margin: 0 auto;
+	padding: 24px;
+}
+
+// A settings page keeps its header and tabs in place: only the form scrolls
+// (the whole width, so the scroll bar is at the edge; the column stays 680px).
+.eizport-page:has(> .eizport-tabs-row) {
+	height: 100%;
+	overflow: hidden;
+
+	> .eizport-form {
+		flex: 1 1 auto;
+		min-height: 0;
+		max-width: none;
+		margin: 0;
+		padding-inline: max(24px, calc((100% - 680px) / 2 + 24px));
+		overflow-y: auto;
+	}
+}
+
+// Tabs on a page without DataViews (Settings → General), as Content Types'.
+.eizport-tabs-row {
+	flex-shrink: 0;
+	padding-inline: 20px;
+	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+	background: var(--wpds-color-background-surface-neutral-strong, #fff);
+
+	> div {
+		min-height: 48px;
+		display: flex;
+		align-items: flex-end;
+	}
+}
+
+// Export screen's file panel, above the list: a line that opens the file's settings.
+.eizport-file-panel {
+	flex-shrink: 0;
+	container-type: inline-size;
+	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+}
+
+.eizport-file-panel__toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 48px;
+	padding: 8px 20px;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+
+	svg {
+		flex: none;
+		fill: currentColor;
+	}
+
+	&:focus-visible {
+		outline: var(--wp-admin-border-width-focus, 2px) solid var(--wp-admin-theme-color, #3858e9);
+		outline-offset: -2px;
+	}
+}
+
+.eizport-file-panel__label {
+	flex: none;
+	font-weight: 600;
+}
+
+.eizport-file-panel__summary {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--wpds-color-foreground-content-neutral-weak, #757575);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.eizport-file-bar {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0 20px 16px;
+	background: var(--wpds-color-background-surface-neutral-strong, #fff);
+
+	&[hidden] {
+		display: none;
+	}
+}
+
+// DataViews shows a row's actions only on hover; "Choose items" is always there.
+.eizport-page .dataviews-view-table tr .dataviews-item-actions .components-button:not(.dataviews-all-actions-button) {
+	opacity: 1;
+}
+
+.eizport-file-bar__more {
+	flex-shrink: 0;
+}
+
+.eizport-modal-actions {
+	margin-top: 24px;
+}
+
+// The header stays at the top (core) and the buttons at the bottom; only the
+// fields scroll.
+.eizport-options-modal .components-modal__content {
+	padding-bottom: 0;
+}
+
+.eizport-options-modal .eizport-modal-actions {
+	position: sticky;
+	bottom: 0;
+	z-index: 1;
+	margin-inline: -32px;
+	padding: 16px 32px 32px;
+	border-top: 1px solid var(--wpds-color-stroke-surface-neutral, #ddd);
+	background: var(--wpds-color-background-surface-neutral-strong, #fff);
+}
+
+.eizport-picker__names {
+	flex-shrink: 0;
+	padding: 16px 20px;
+	border-top: 1px solid var(--wpds-color-stroke-surface-neutral);
+}
+
+// The row's fields take the free space.
+.eizport-file-bar > :first-child {
+	flex: 1;
+	min-width: 0;
+}
+
+// DataForm gives each control an equal share; the toggles take only their
+// width and sit together, the format and the file name take the rest.
+.eizport-file-bar .dataforms-layouts-row__field-control:nth-child(n + 3) {
+	flex: 0 0 auto;
+	width: auto;
+}
+
+// Toggle labels never break in the middle.
+.eizport-file-bar .components-toggle-control label {
+	white-space: nowrap;
+}
+
+// Two lines when the panel is narrower than one line needs (a narrow window,
+// or the side panel open): the format and the file name, then the toggles,
+// with Options at the end of that line. The panel's width decides, not the
+// window's (the panel is the container).
+@container (max-width: 1199px) {
+	.eizport-file-bar .dataforms-layouts-row__field > div {
+		flex-wrap: wrap;
+		row-gap: 12px;
+	}
+
+	// Half each, less half the gap: the line is full and the toggles wrap.
+	.eizport-file-bar .dataforms-layouts-row__field-control:nth-child(-n + 2) {
+		flex: 1 1 calc(50% - 8px);
+		max-width: none;
+	}
+}
+
+// Narrower still: the panel stacks; the format and the file name take the
+// width, the toggles follow inline, then Options.
+@container (max-width: 599px) {
+	.eizport-file-bar {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 12px;
+		padding-block: 12px;
+	}
+
+	.eizport-file-bar .dataforms-layouts-row__field-control:nth-child(-n + 2) {
+		flex: 1 1 100%;
+	}
+
+	.eizport-file-bar__more {
+		justify-content: flex-end;
+	}
+}
+
+// "Themes and plugins" with a count, like the filters' button.
+.eizport-counted {
+	position: relative;
+}
+
+.eizport-count {
+	position: absolute;
+	top: 0;
+	right: 0;
+	box-sizing: border-box;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	transform: translate(50%, -50%);
+	border-radius: 8px;
+	outline: 2px solid var(--wpds-color-background-surface-neutral-strong, #fff);
+	background: var(--wpds-color-background-interactive-brand-strong, var(--wp-admin-theme-color, #3858e9));
+	color: var(--wpds-color-foreground-interactive-neutral-strong, #f0f0f0);
+	font-size: 11px;
+	line-height: 16px;
+	text-align: center;
+}
+
+// Small screens.
+@media (max-width: 781px) {
+	// Tabs on one line, the search and view tools on the next.
+	.eizport-header-row {
+		flex-wrap: wrap;
+		row-gap: 4px;
+		padding-block-end: 8px;
+
+		> :last-child {
+			flex: 1 1 auto;
+			justify-content: flex-end;
+		}
+	}
+
+	// Long names (a copy's file name) wrap instead of being cut.
+	.eizport-page .dataviews-view-table tbody .dataviews-title-field {
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+}
+
+// A toggle in the footer row lines up with the 40px fields and buttons.
+.eizport-file-bar .components-toggle-control {
+	display: flex;
+	align-items: center;
+	min-height: 40px;
+}
+
+// The ⓘ's help, opened by a click.
+.eizport-help-popover .components-popover__content {
+	width: 260px;
+	max-width: calc(100vw - 32px);
+	padding: 8px 12px;
+	font-size: 12px;
+	line-height: 1.4;
+}

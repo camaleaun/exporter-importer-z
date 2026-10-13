@@ -1,0 +1,121 @@
+---
+/**
+ * The docs' home, in the page's language: every group and page, with what
+ * each covers. Routes: pages/docs/index.astro and pages/[locale]/docs/.
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Icon from '@components/Icon.astro';
+import { sidebar } from '../data/sidebar';
+import { docsEntries, docsPagesIn } from '@libs/docs';
+import { localeOf, pageStatus, t } from '@libs/i18n';
+import { slugify } from '@libs/site';
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale ).docs.home;
+const pages = docsPagesIn( locale );
+const entries = await docsEntries();
+const describe = ( slug: string ) =>
+	pageStatus( locale, slug ).description ??
+	entries.find( ( entry ) => entry.id === slug )?.data.description ??
+	( slug.endsWith( 'faq' ) ? strings.faq : strings.changelog );
+---
+
+<BaseLayout title={ strings.title } description={ strings.description }>
+	<div class="container docs-home">
+		<header class="docs-home__head">
+			<p class="eyebrow">{ strings.eyebrow }</p>
+			<h1>{ strings.heading }</h1>
+			<p class="lead">{ strings.lead }</p>
+		</header>
+		<div class="docs-home__groups">
+			{
+				sidebar.map( ( group ) => (
+					<section class="docs-home__group">
+						<h2>
+							<Icon name={ group.icon } />
+							{ pages.find( ( p ) => p.slug.startsWith( `${ slugify( group.title ) }/` ) )!.group }
+						</h2>
+						<ul>
+							{ group.pages.map( ( page ) => {
+								const slug = `${ slugify( group.title ) }/${ slugify( page.title ) }`;
+								const target = pages.find( ( p ) => p.slug === slug )!;
+								return (
+									<li>
+										<a href={ target.href }>{ target.title }</a>
+										<p>{ describe( slug ) }</p>
+									</li>
+								);
+							} ) }
+						</ul>
+					</section>
+				) )
+			}
+		</div>
+	</div>
+</BaseLayout>
+
+<style lang="scss">
+	@use '../styles/mq' as *;
+
+	.docs-home {
+		padding-block: var(--eiz-space-12);
+	}
+
+	.docs-home__head {
+		margin-bottom: var(--eiz-space-12);
+	}
+
+	.docs-home__groups {
+		display: grid;
+		gap: var(--eiz-space-6);
+
+		@include break-medium {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		@include break-wide {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	.docs-home__group {
+		padding: var(--eiz-space-6);
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius-lg);
+		background: var(--eiz-paper);
+
+		h2 {
+			display: flex;
+			align-items: center;
+			gap: var(--eiz-space-2);
+			font-size: 1.25rem;
+
+			:global(.icon) {
+				color: var(--eiz-primary);
+			}
+		}
+
+		ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+
+		li + li {
+			margin-top: var(--eiz-space-3);
+		}
+
+		a {
+			display: inline-flex;
+			align-items: center;
+			min-height: var(--eiz-target);
+			font-weight: 600;
+		}
+
+		p {
+			margin: 0;
+			color: var(--eiz-muted);
+			font-size: var(--eiz-text-sm);
+		}
+	}
+</style>

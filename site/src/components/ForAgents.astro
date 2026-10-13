@@ -1,0 +1,229 @@
+---
+/**
+ * "For agents" in the hero (as Bootstrap 6's site has): copy the install
+ * command or the docs index, read the AI agents page, or open ChatGPT or
+ * Claude already pointed at llms.txt. A <details> menu (works without
+ * JavaScript); a few lines of script for the copy buttons and to keep the
+ * menu on screen: under the button's start when it fits, else its end.
+ */
+import Icon from './Icon.astro';
+import { fill, href, localeOf, t } from '@libs/i18n';
+import { site, url } from '@libs/site';
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale ).agents;
+const origin = Astro.site ?? new URL( 'https://eizport.github.io' );
+const llms = new URL( url( 'llms.txt' ), origin ).href;
+const prompt = fill( strings.prompt, { llms, name: site.name } );
+const install = `wp plugin install ${ site.download } --activate`;
+const ask = [
+	{ name: strings.chatgpt, href: `https://chatgpt.com/?q=${ encodeURIComponent( prompt ) }` },
+	{ name: strings.claude, href: `https://claude.ai/new?q=${ encodeURIComponent( prompt ) }` },
+];
+---
+
+<details class="agents" data-copied={ strings.copied }>
+	<summary>
+		<Icon name="sparkles" size={ 20 } />
+		{ strings.button }
+		<Icon name="chevron" size={ 18 } class="agents__chevron" />
+	</summary>
+	<div class="agents__menu">
+		<button class="agents__item" type="button" data-copy={ install }>
+			<Icon name="terminal" size={ 18 } />
+			<span>{ strings.install }</span>
+			<Icon name="copy" size={ 16 } class="agents__copy" />
+		</button>
+		<button class="agents__item" type="button" data-copy={ llms }>
+			<Icon name="book" size={ 18 } />
+			<span>{ strings.llms }</span>
+			<Icon name="copy" size={ 16 } class="agents__copy" />
+		</button>
+		<hr />
+		<a class="agents__item" href={ href( locale, 'docs/developers/ai-agents/' ) }>
+			<Icon name="code" size={ 18 } />
+			<span>{ strings.docs }</span>
+		</a>
+		<a class="agents__item" href={ url( 'llms-full.txt' ) }>
+			<Icon name="list" size={ 18 } />
+			<span>{ strings.full }</span>
+		</a>
+		<hr />
+		{
+			ask.map( ( item ) => (
+				<a class="agents__item" href={ item.href } rel="noopener" target="_blank">
+					<Icon name="sparkles" size={ 18 } />
+					<span>{ item.name }</span>
+					<Icon name="external" size={ 16 } class="agents__copy" />
+				</a>
+			) )
+		}
+	</div>
+</details>
+
+<script>
+	for ( const button of document.querySelectorAll< HTMLButtonElement >( '.agents [data-copy]' ) ) {
+		button.addEventListener( 'click', async () => {
+			const label = button.querySelector( 'span' );
+			try {
+				await navigator.clipboard.writeText( button.dataset.copy ?? '' );
+			} catch {
+				return;
+			}
+			if ( ! label || button.dataset.copied ) return;
+			const text = label.textContent;
+			button.dataset.copied = '1';
+			label.textContent = button.closest< HTMLElement >( '.agents' )?.dataset.copied ?? 'Copied';
+			setTimeout( () => {
+				label.textContent = text;
+				delete button.dataset.copied;
+			}, 2000 );
+		} );
+	}
+	// Like a popper, without one: the menu opens under the button's start when it
+	// fits in the window, else under its end, else as far in as the gutter allows.
+	const GUTTER = 16;
+	const place = ( menu: HTMLDetailsElement ) => {
+		const panel = menu.querySelector< HTMLElement >( '.agents__menu' );
+		if ( ! panel || ! menu.open ) return;
+		panel.style.removeProperty( '--agents-shift' );
+		menu.classList.remove( 'agents--end' );
+		const width = window.innerWidth;
+		const button = menu.getBoundingClientRect();
+		const size = panel.getBoundingClientRect().width;
+		if ( button.left + size <= width - GUTTER ) return;
+		if ( button.right - size >= GUTTER ) {
+			menu.classList.add( 'agents--end' );
+			return;
+		}
+		// Neither fits: from the start, moved back into the window.
+		panel.style.setProperty( '--agents-shift', `${ Math.min( 0, width - GUTTER - size - button.left ) }px` );
+	};
+	for ( const menu of document.querySelectorAll< HTMLDetailsElement >( 'details.agents' ) ) {
+		menu.addEventListener( 'toggle', () => place( menu ) );
+	}
+	window.addEventListener( 'resize', () => {
+		for ( const menu of document.querySelectorAll< HTMLDetailsElement >( 'details.agents[open]' ) ) place( menu );
+	} );
+	// Close the menu on a click outside it or on Escape.
+	document.addEventListener( 'click', ( event ) => {
+		for ( const menu of document.querySelectorAll< HTMLDetailsElement >( 'details.agents[open]' ) ) {
+			if ( ! menu.contains( event.target as Node ) ) menu.open = false;
+		}
+	} );
+	document.addEventListener( 'keydown', ( event ) => {
+		if ( event.key !== 'Escape' ) return;
+		for ( const menu of document.querySelectorAll< HTMLDetailsElement >( 'details.agents[open]' ) ) {
+			menu.open = false;
+			menu.querySelector( 'summary' )?.focus();
+		}
+	} );
+</script>
+
+<style>
+	/* No global details margin: it would stretch the row of hero buttons. */
+	.agents {
+		position: relative;
+		display: flex;
+		margin: 0;
+	}
+
+	summary {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 48px;
+		padding: 0.75rem 1.4rem;
+		border: 1px solid rgba(255, 255, 255, 0.55);
+		border-radius: var(--eiz-radius-sm);
+		color: #fff;
+		font-weight: 600;
+		font-size: 1rem;
+		line-height: 1.2;
+		white-space: nowrap;
+		cursor: pointer;
+		list-style: none;
+		transition: background-color 0.15s;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+
+		&:hover {
+			background: rgba(255, 255, 255, 0.1);
+		}
+	}
+
+	/* It doesn't fit under the button's start: under its end (script). */
+	.agents--end .agents__menu {
+		inset-inline-start: auto;
+		inset-inline-end: 0;
+	}
+
+	.agents[open] :global(.agents__chevron) {
+		transform: rotate(180deg);
+	}
+
+	.agents__menu {
+		position: absolute;
+		z-index: 20;
+		top: calc(100% + 8px);
+		inset-inline-start: var(--agents-shift, 0);
+		display: grid;
+		min-width: min(22rem, calc(100vw - 2rem));
+		padding: var(--eiz-space-2);
+		border: 1px solid var(--eiz-border);
+		border-radius: var(--eiz-radius);
+		background: var(--eiz-paper);
+		box-shadow: var(--eiz-shadow-lg);
+		text-align: start;
+
+		hr {
+			margin: var(--eiz-space-2) 0;
+			border: 0;
+			border-top: 1px solid var(--eiz-border);
+		}
+	}
+
+	.agents__item {
+		display: flex;
+		align-items: center;
+		gap: var(--eiz-space-3);
+		min-height: 44px;
+		padding: 0 var(--eiz-space-3);
+		border: 0;
+		border-radius: var(--eiz-radius-sm);
+		background: none;
+		color: var(--eiz-ink);
+		font: inherit;
+		font-size: 0.9375rem;
+		text-align: start;
+		text-decoration: none;
+		cursor: pointer;
+
+		&:hover,
+		&:focus-visible {
+			background: var(--eiz-surface);
+			color: var(--eiz-ink);
+		}
+
+		span {
+			flex: 1;
+		}
+
+		:global(.icon) {
+			color: var(--eiz-primary);
+			flex-shrink: 0;
+		}
+
+		:global(.agents__copy) {
+			color: var(--eiz-muted);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		summary {
+			transition: none;
+		}
+	}
+</style>

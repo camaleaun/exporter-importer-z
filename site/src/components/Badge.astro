@@ -1,0 +1,40 @@
+---
+/** A short label: neutral, primary (info) or accent (new). */
+interface Props {
+	tone?: 'neutral' | 'primary' | 'accent';
+}
+
+const { tone = 'neutral' } = Astro.props;
+---
+
+<span class:list={[ 'badge', `badge--${ tone }` ]}><slot /></span>
+
+<style>
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35em;
+		padding: 0.15em 0.6em;
+		border-radius: 999px;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		line-height: 1.5;
+		white-space: nowrap;
+	}
+
+	.badge--neutral {
+		background: var(--eiz-surface);
+		color: var(--eiz-ink);
+		border: 1px solid var(--eiz-border);
+	}
+
+	.badge--primary {
+		background: var(--eiz-primary-soft);
+		color: var(--eiz-primary-strong);
+	}
+
+	.badge--accent {
+		background: var(--eiz-accent-soft);
+		color: light-dark(#7a3f06, #f6c089);
+	}
+</style>

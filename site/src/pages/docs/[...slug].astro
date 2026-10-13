@@ -1,0 +1,19 @@
+---
+/** Each Markdown docs page in English (src/views/DocsEntry.astro). */
+import type { InferGetStaticPropsType } from 'astro';
+import DocsEntry from '../../views/DocsEntry.astro';
+import { docsEntries } from '@libs/docs';
+
+export async function getStaticPaths() {
+	return ( await docsEntries() ).map( ( entry ) => ( {
+		params: { slug: entry.id },
+		props: { entry },
+	} ) );
+}
+
+type Props = InferGetStaticPropsType< typeof getStaticPaths >;
+
+const { entry } = Astro.props;
+---
+
+<DocsEntry entry={ entry } />

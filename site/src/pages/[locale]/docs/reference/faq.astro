@@ -1,0 +1,9 @@
+---
+/** The FAQ in each translated language (translations.json). */
+import Faq from '../../../../views/Faq.astro';
+import { localeParams } from '@libs/i18n';
+
+export const getStaticPaths = localeParams;
+---
+
+<Faq />

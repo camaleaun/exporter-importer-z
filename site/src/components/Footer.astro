@@ -1,0 +1,142 @@
+---
+/** The site footer: what it is, links, license. */
+import Logo from './Logo.astro';
+import { fill, href, localeOf, t } from '@libs/i18n';
+import { site } from '@libs/site';
+
+const locale = localeOf( Astro.url.pathname );
+const strings = t( locale );
+const s = strings.footer;
+const groups = [
+	{
+		title: s.product,
+		links: [
+			{ label: s.playground, href: site.demo },
+			{ label: s.download, href: site.download },
+			{ label: s.changelog, href: href( locale, 'docs/reference/changelog/' ) },
+		],
+	},
+	{
+		title: s.docs,
+		links: [
+			{ label: s.gettingStarted, href: href( locale, 'docs/getting-started/introduction/' ) },
+			{ label: s.exporting, href: href( locale, 'docs/exporting/export-screen/' ) },
+			{ label: s.formats, href: href( locale, 'docs/formats/wxrz-bundle/' ) },
+			{ label: s.developers, href: href( locale, 'docs/developers/abilities/' ) },
+		],
+	},
+	{
+		title: s.project,
+		links: [
+			{ label: s.source, href: site.repo },
+			{ label: s.issue, href: site.issues },
+			{ label: s.releases, href: site.releases },
+			{ label: s.support, href: href( locale, 'donate/' ) },
+			{ label: s.supporters, href: href( locale, 'supporters/' ) },
+		],
+	},
+];
+---
+
+<footer class="footer">
+	<div class="container footer__inner">
+		<div class="footer__about">
+			<Logo size={ 28 } />
+			<p>{ fill( s.about, { tagline: strings.site.tagline, requires: site.requires } ) }</p>
+		</div>
+		{
+			groups.map( ( group ) => (
+				<nav class="footer__group" aria-label={ group.title }>
+					<h2>{ group.title }</h2>
+					<ul>
+						{ group.links.map( ( link ) => (
+							<li>
+								<a href={ link.href }>{ link.label }</a>
+							</li>
+						) ) }
+					</ul>
+				</nav>
+			) )
+		}
+	</div>
+	<div class="container footer__legal">
+		<p>{ fill( s.legal, { license: site.license } ) }</p>
+	</div>
+</footer>
+
+<style lang="scss">
+	@use '../styles/mq' as *;
+
+	.footer {
+		margin-top: var(--eiz-space-16);
+		padding-top: var(--eiz-space-12);
+		border-top: 1px solid var(--eiz-border);
+		background: var(--eiz-surface);
+		font-size: var(--eiz-text-sm);
+	}
+
+	.footer__inner {
+		display: grid;
+		gap: var(--eiz-space-8);
+
+		@include break-small {
+			grid-template-columns: repeat(3, 1fr);
+		}
+
+		@include break-large {
+			grid-template-columns: 2fr repeat(3, 1fr);
+		}
+	}
+
+	.footer__about {
+		@include break-small {
+			grid-column: 1 / -1;
+		}
+
+		@include break-large {
+			grid-column: auto;
+		}
+
+		p {
+			margin-top: var(--eiz-space-3);
+			color: var(--eiz-muted);
+			max-width: 36ch;
+		}
+	}
+
+	h2 {
+		font-size: var(--eiz-text-sm);
+		letter-spacing: 0.02em;
+		margin-bottom: var(--eiz-space-2);
+	}
+
+	ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	a {
+		display: inline-flex;
+		align-items: center;
+		min-height: var(--eiz-target);
+		color: var(--eiz-muted);
+		text-decoration: none;
+
+		&:hover {
+			color: var(--eiz-primary);
+			text-decoration: underline;
+		}
+	}
+
+	.footer__legal {
+		padding-block: var(--eiz-space-8);
+		margin-top: var(--eiz-space-8);
+		border-top: 1px solid var(--eiz-border);
+		color: var(--eiz-muted);
+
+		p {
+			margin: 0;
+		}
+	}
+</style>
