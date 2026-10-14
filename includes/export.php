@@ -28,91 +28,55 @@ const PLUGINS_FIELD   = 'eizport_plugins';
 const KEEP_FIELD      = 'eizport_keep_copy';
 const SAVE_FIELD      = 'eizport_save_defaults';
 const SAVE_NONCE      = 'eizport_save_defaults_nonce';
+const KEEP_NONCE      = 'eizport_keep_copy_nonce';
 
 /**
  * Registers the hooks.
  */
 function bootstrap() {
+	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue' );
 	add_action( 'export_filters', __NAMESPACE__ . '\file_options', 20 );
 	add_filter( 'export_args', __NAMESPACE__ . '\file_args' );
 	add_action( 'export_wp', __NAMESPACE__ . '\file_output' );
 }
 
 /**
- * Fills the classic screen with the saved defaults (Defaults\get()), once
- * the type checkboxes exist: types and their items or filters, the bundle,
- * its file name and media, settings, Playground themes and plugins.
+ * Loads the classic screen's script and styles (assets/classic-export.*),
+ * on Tools → Export when Eizport replaces it, with what they need from
+ * here: field names, texts, the download cookie and the saved defaults
+ * (Defaults\get()) that fill the form once the type checkboxes exist.
+ *
+ * @param string $hook The admin page.
  */
-function defaults_script() {
-	$defaults = \Eizport\Defaults\get();
-	if ( ! $defaults ) {
+function enqueue( $hook ) {
+	if ( 'export.php' !== $hook || ! \Eizport\AdminApp\replaces_export() ) {
 		return;
 	}
-	$contents = \Eizport\Selection\types();
-	?>
-	<script>
-		// After the selection script's own jQuery ready handlers, which react to the changes.
-		( window.jQuery || function ( run ) {
-			document.addEventListener( 'DOMContentLoaded', run );
-		} )( function () {
-			var defaults = <?php echo wp_json_encode( $defaults ); ?>;
-			var contents = <?php echo wp_json_encode( $contents ); ?>;
-			var form = document.getElementById( 'export-filters' );
-			if ( ! form ) {
-				return;
-			}
-			var set = function ( input, value ) {
-				if ( input && input.checked !== value ) {
-					input.checked = value;
-					input.dispatchEvent( new Event( 'change', { bubbles: true } ) );
-				}
-			};
-			var named = function ( name, value ) {
-				return form.querySelector( '[name="' + name + '"]' + ( undefined === value ? '' : '[value="' + value + '"]' ) );
-			};
-			var settings = defaults.settings || {};
-
-			Object.keys( defaults.types || {} ).forEach( function ( type ) {
-				var spec = defaults.types[ type ];
-				var box = form.querySelector( '.eizport-type-box[value="' + ( contents[ type ] || type ) + '"]' );
-				set( box, true );
-				if ( spec.ids ) {
-					set( named( 'eizport_mode[' + type + ']', 'select' ), true );
-					spec.ids.forEach( function ( id ) {
-						set( named( 'eizport_ids[' + type + '][]', id ), true );
-					} );
-				} else if ( spec.filters && spec.filters.status ) {
-					var status = named( 'eizport_filters[' + type + '][status]' ) || named( type + '_status' );
-					if ( status ) {
-						status.value = spec.filters.status;
-					}
-				}
-			} );
-
-			var bundle = 'playground' === settings.format || settings.media || ( settings.option_groups || [] ).length || ( settings.option_names || [] ).length;
-			set( document.getElementById( 'eizport-bundle' ), !! bundle );
-			if ( settings.filename ) {
-				document.getElementById( 'eizport-filename' ).value = settings.filename;
-			}
-			set( named( <?php echo wp_json_encode( MEDIA_FIELD ); ?> ), !! settings.media );
-			( settings.option_groups || [] ).forEach( function ( group ) {
-				set( named( <?php echo wp_json_encode( \Eizport\Options\GROUPS_FIELD . '[]' ); ?>, group ), true );
-			} );
-			if ( ( settings.option_names || [] ).length ) {
-				document.getElementById( 'eizport-options-extra' ).value = settings.option_names.join( ', ' );
-			}
-			set( document.getElementById( 'eizport-blueprint' ), 'playground' === settings.format );
-			form.querySelectorAll( 'input[name="<?php echo esc_js( THEMES_FIELD ); ?>[]"]' ).forEach( function ( input ) {
-				if ( 'playground' === settings.format ) {
-					set( input, ( settings.themes || [] ).indexOf( input.value ) !== -1 );
-				}
-			} );
-			( settings.plugins || [] ).forEach( function ( plugin ) {
-				set( named( <?php echo wp_json_encode( PLUGINS_FIELD . '[]' ); ?>, plugin ), true );
-			} );
-		} );
-	</script>
-	<?php
+	$base = plugins_url( 'assets/', dirname( __DIR__ ) . '/eizport.php' );
+	$dir  = dirname( __DIR__ ) . '/assets/';
+	wp_enqueue_style( 'eizport-classic-export', $base . 'classic-export.css', array(), (string) filemtime( $dir . 'classic-export.css' ) );
+	wp_enqueue_script( 'eizport-classic-export', $base . 'classic-export.js', array( 'jquery' ), (string) filemtime( $dir . 'classic-export.js' ), array( 'in_footer' => true ) );
+	$defaults = \Eizport\Defaults\get();
+	$config   = array(
+		'typesField'      => \Eizport\Selection\TYPES_FIELD . '[]',
+		'bundleExtension' => bundle_extension(),
+		'cookie'          => \Eizport\Copies\COOKIE,
+		'cookiePath'      => ADMIN_COOKIE_PATH,
+		'fields'          => array(
+			'media'   => MEDIA_FIELD,
+			'groups'  => \Eizport\Options\GROUPS_FIELD . '[]',
+			'themes'  => THEMES_FIELD . '[]',
+			'plugins' => PLUGINS_FIELD . '[]',
+		),
+		'texts'           => array(
+			'chooseWhat' => __( 'Choose what to export.', 'eizport' ),
+			'checkItems' => __( 'Check at least one item to export for each type exported by selection.', 'eizport' ),
+			'download'   => download_notice_texts(),
+		),
+		'defaults'        => $defaults ? $defaults : null,
+		'contents'        => \Eizport\Selection\types(),
+	);
+	wp_add_inline_script( 'eizport-classic-export', 'window.eizportClassicExport = ' . wp_json_encode( $config ) . ';', 'before' );
 }
 
 /**
@@ -188,6 +152,7 @@ function file_options() {
 					echo esc_html( sprintf( __( 'Keep a copy (%s) to open by link on playground.wordpress.net', 'eizport' ), \Eizport\Copies\lifetime_label() ) );
 					?>
 				</label>
+				<?php wp_nonce_field( KEEP_FIELD, KEEP_NONCE, false ); ?>
 			</p>
 			<p class="description" style="margin-left: 1.75em;">
 				<?php
@@ -216,35 +181,7 @@ function file_options() {
 			<?php wp_nonce_field( SAVE_FIELD, SAVE_NONCE, false ); ?>
 		</p>
 	<?php endif; ?>
-	<?php defaults_script(); ?>
 	<div id="eizport-download-notice" class="notice notice-success inline" hidden="hidden"></div>
-	<style>
-		/* Fieldsets shrink with the screen (browsers give them min-content). */
-		#export-filters fieldset { min-width: 0; }
-		#export-filters .regular-text { max-width: 100%; box-sizing: border-box; }
-		@media screen and (max-width: 782px) {
-			/* A whole row to tap, 40px high, the box as core draws it. */
-			#export-filters label:has(> input[type="checkbox"]),
-			#export-filters label:has(> input[type="radio"]) {
-				display: flex;
-				align-items: center;
-				gap: 8px;
-				min-height: 40px;
-				line-height: 1.4;
-			}
-			#export-filters label > input[type="checkbox"],
-			#export-filters label > input[type="radio"] { flex-shrink: 0; margin: 0; }
-			#export-filters label + br { display: none; }
-			/* Nested blocks keep a small indent. */
-			#eizport-bundle-options,
-			#eizport-blueprint-options,
-			#export-filters .description[style*="margin-left"] { margin-left: 0.75em !important; }
-			#export-filters .eizport-checklist,
-			#export-filters .eizport-checklist-items { max-width: 100%; box-sizing: border-box; line-height: 1.4; }
-			#eizport-extension { display: inline-block; margin-top: 4px; }
-			#export-filters code { overflow-wrap: anywhere; }
-		}
-	</style>
 	<?php if ( current_user_can( 'import' ) ) : ?>
 		<p class="description">
 			<?php
@@ -264,105 +201,6 @@ function file_options() {
 			?>
 		</p>
 	<?php endif; ?>
-	<script>
-		( function () {
-			var bundle = document.getElementById( 'eizport-bundle' );
-			var blueprint = document.getElementById( 'eizport-blueprint' );
-			var extension = document.getElementById( 'eizport-extension' );
-			var options = document.getElementById( 'eizport-bundle-options' );
-			bundle.addEventListener( 'change', function () {
-				options.disabled = ! bundle.checked;
-			} );
-			blueprint.addEventListener( 'change', function () {
-				document.getElementById( 'eizport-blueprint-options' ).disabled = ! blueprint.checked;
-				extension.textContent = blueprint.checked ? '.zip' : '.<?php echo esc_js( bundle_extension() ); ?>';
-			} );
-
-			// After a Playground .zip is downloaded, the response's cookie says its name and copy link.
-			var notice = document.getElementById( 'eizport-download-notice' );
-			var cookie = <?php echo wp_json_encode( \Eizport\Copies\COOKIE ); ?>;
-			var path = <?php echo wp_json_encode( ADMIN_COOKIE_PATH ); ?>;
-			var text = <?php echo wp_json_encode( download_notice_texts() ); ?>;
-			var timer;
-
-			function readCookie() {
-				var match = document.cookie.match( new RegExp( '(?:^|; )' + cookie + '=([^;]*)' ) );
-				if ( ! match ) {
-					return null;
-				}
-				document.cookie = cookie + '=; Max-Age=0; path=' + path;
-				try {
-					return JSON.parse( decodeURIComponent( match[ 1 ] ) );
-				} catch ( e ) {
-					return null;
-				}
-			}
-
-			function element( tag, content, attributes ) {
-				var node = document.createElement( tag );
-				node.textContent = content || '';
-				Object.keys( attributes || {} ).forEach( function ( name ) {
-					node.setAttribute( name, attributes[ name ] );
-				} );
-				return node;
-			}
-
-			function copyButton( value, label ) {
-				var button = element( 'button', label, { type: 'button', 'class': 'button button-small' } );
-				button.addEventListener( 'click', function () {
-					navigator.clipboard.writeText( value ).then( function () {
-						button.textContent = text.copied;
-						setTimeout( function () {
-							button.textContent = label;
-						}, 2000 );
-					} );
-				} );
-				return button;
-			}
-
-			function show( data ) {
-				var line;
-				notice.textContent = '';
-				line = element( 'p', text.downloaded + ' ' );
-				line.appendChild( element( 'code', data.file ) );
-				notice.appendChild( line );
-
-				line = element( 'p', text.run + ' ' );
-				line.appendChild( element( 'code', data.command ) );
-				line.appendChild( document.createTextNode( ' ' ) );
-				line.appendChild( copyButton( data.command, text.copy ) );
-				notice.appendChild( line );
-
-				if ( data.playground ) {
-					line = element( 'p', text.kept + ' ' );
-					line.appendChild( element( 'a', text.open, { href: data.playground, target: '_blank', rel: 'noopener' } ) );
-					line.appendChild( document.createTextNode( ' ' ) );
-					line.appendChild( copyButton( data.playground, text.copyLink ) );
-					notice.appendChild( line );
-				}
-				notice.hidden = false;
-			}
-
-			bundle.closest( 'form' ).addEventListener( 'submit', function ( event ) {
-				var tries = 0;
-				if ( event.defaultPrevented || ! bundle.checked || ! blueprint.checked ) {
-					return;
-				}
-				readCookie();
-				notice.hidden = true;
-				clearInterval( timer );
-				timer = setInterval( function () {
-					var data = readCookie();
-					if ( data || ++tries > 1200 ) {
-						clearInterval( timer );
-					}
-					if ( data ) {
-						show( data );
-					}
-				}, 500 );
-			} );
-		} )();
-	</script>
 	<?php
 }
 
@@ -429,11 +267,6 @@ function blueprint_options() {
 		<p class="description"><?php esc_html_e( 'The active theme is activated, if checked; else the first theme checked.', 'eizport' ); ?></p>
 		<p class="description"><?php esc_html_e( 'Any installed theme or plugin can go in. The ones from the WordPress.org directory are installed from there, in the version this site has; premium and custom ones are copied into the file: share it only where their licenses allow.', 'eizport' ); ?></p>
 	</div>
-	<style>
-		.eizport-blueprint-lists fieldset { margin: 0.5em 0 1em; }
-		.eizport-blueprint-lists legend { margin-bottom: 0.25em; }
-		.eizport-checklist { max-height: 12em; overflow: auto; max-width: 30em; padding: 0.5em 0.75em; border: 1px solid #c3c4c7; background: #fff; line-height: 2; }
-	</style>
 	<?php
 }
 
@@ -483,7 +316,8 @@ function file_args( $args ) {
 			// Settings → Eizport → General.
 			'post_content' => \Eizport\Settings\get()['content_files'],
 			'linked'       => in_array( \Eizport\Settings\get()['linked_options'], array( 'export', 'both' ), true ),
-			'keep_copy'    => $field( KEEP_FIELD ),
+			// A copy is written to disk: only from this form (core's export form has no nonce).
+			'keep_copy'    => $field( KEEP_FIELD ) && isset( $_GET[ KEEP_NONCE ] ) && wp_verify_nonce( sanitize_key( wp_unslash( $_GET[ KEEP_NONCE ] ) ), KEEP_FIELD ),
 			'options'      => $field( BUNDLE_FIELD ) ? \Eizport\Options\requested_names() : array(),
 			'themes'       => $list( THEMES_FIELD ),
 			'plugins'      => $list( PLUGINS_FIELD ),

@@ -5,7 +5,7 @@ Tags: export, import, wxr, migration, media
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -100,6 +100,16 @@ They follow the same rules as the screens: the `export` capability for exporting
 * `eizport_copy_lifetime` — how long a Playground copy lasts, in seconds (default: the one chosen in the settings; 0 keeps copies until deleted).
 * `wp eizport import <file>` — WP-CLI command that imports a .wxrz (or .xml.gz, or .xml) with the WordPress Importer, attachments included.
 
+== External services ==
+
+Eizport doesn't run a service of its own and sends nothing to its authors. A few features rely on WordPress.org services, as WordPress itself does, or on links you choose to open:
+
+* **WordPress.org plugin and theme API** (api.wordpress.org). When you build a Playground .zip, Eizport asks WordPress for the update information it already keeps about your plugins and themes, to know which ones come from the directory: those are installed from there instead of being copied into the .zip. If WordPress doesn't know one of them yet, it runs its usual update check, which sends the list of installed plugins and themes with their versions, the WordPress and PHP versions, the site's language and its address. On the other site, a plugin exported "as plugin" asks the same API whether Eizport is in the directory, when its screen is opened and Eizport isn't installed: the request carries the name "eizport" and what WordPress sends with every such request (its version, the site's language and address). WordPress.org privacy policy: https://wordpress.org/about/privacy/
+* **WordPress.org downloads** (downloads.wordpress.org). "Install Now" installs Eizport or the WordPress Importer from there, through WordPress's own installer, only when you click it. Inside WordPress Playground, the blueprint installs the directory's plugins and themes, in the versions your site has, from there too. Same privacy policy.
+* **WordPress Playground** (playground.wordpress.net), a WordPress.org project that runs WordPress in the browser: https://wordpress.org/playground/. "Open in WordPress Playground" opens it in your browser, only when you click it, with the link of a copy kept on your site; Playground then downloads that .zip, with the content you exported, from your site into your browser. The `$schema` address in blueprint.json is only a reference for editors; nothing is requested from it. Same privacy policy.
+* **The site the content came from.** Like the WordPress Importer, an import downloads the media files a plain WXR points to, or that a bundle doesn't include, from their original addresses. The files a bundle includes are served from your own server.
+* **GitHub** (github.com/eizport/eizport). When Eizport isn't installed, a plugin exported "as plugin" also shows a "Download Eizport" link to its releases there; nothing is sent unless you click it. Terms: https://docs.github.com/en/site-policy/github-terms/github-terms-of-service — privacy: https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement
+
 == Installation ==
 
 1. Install and activate Eizport. Exporting works right away, from **Tools → Export**.
@@ -125,7 +135,7 @@ Uploads are limited by your server's PHP settings (`upload_max_filesize` and `po
 
 = Does it send data anywhere? =
 
-No. The plugin makes no requests to other sites. When importing a bundle, the importer's attachment downloads are answered from the bundle on your own server. A Playground copy's link is opened by your browser only when you click it: Playground runs in the browser and fetches the .zip from your site.
+Not to its authors: Eizport has no service of its own. It uses WordPress.org's plugin and theme information and downloads, as WordPress does, and opens WordPress Playground only when you click to; see "External services" for what is sent and when. When importing a bundle, the importer's attachment downloads are answered from the bundle on your own server.
 
 = What does the Playground blueprint do? =
 
@@ -154,10 +164,19 @@ The PHP is in the plugin, readable. The Export and Settings screens' JavaScript 
 
 == Upgrade Notice ==
 
+= 1.0.1 =
+Fixes "As plugin: allow importing again", which wasn't saved, and documents the external services the plugin uses.
+
 = 1.0.0 =
 Initial release.
 
 == Changelog ==
+
+= 1.0.1 =
+* Fixed: Settings → Export → "As plugin: allow importing again" is saved.
+* Scripts and styles of the classic Export screen, the importer and the Export and Settings screens are enqueued files.
+* Keeping a Playground copy, which writes a file, needs the Export form's nonce.
+* readme: an "External services" section on what is sent to WordPress.org, WordPress Playground and GitHub, and when.
 
 = 1.0.0 =
 * Initial release.

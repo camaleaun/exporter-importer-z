@@ -1,0 +1,42 @@
+/*
+ * The classic Tools → Export screen, when Eizport replaces it
+ * (includes/export.php, selection.php, options.php).
+ */
+
+/* Item checklists of a type exported by selection. */
+.eizport-checklist-items { max-height: 16em; overflow: auto; max-width: 34em; padding: 0.5em 0.75em; border: 1px solid #c3c4c7; background: #fff; }
+.eizport-checklist-items ul { margin: 0; }
+.eizport-checklist-items ul ul { margin-left: 1.5em; }
+.eizport-checklist-items li { margin: 0.25em 0; }
+.eizport-picker .description, .eizport-list-search { margin: 0.5em 0; }
+
+/* Themes and plugins for the Playground .zip. */
+.eizport-blueprint-lists fieldset { margin: 0.5em 0 1em; }
+.eizport-blueprint-lists legend { margin-bottom: 0.25em; }
+.eizport-checklist { max-height: 12em; overflow: auto; max-width: 30em; padding: 0.5em 0.75em; border: 1px solid #c3c4c7; background: #fff; line-height: 2; }
+
+/* Fieldsets shrink with the screen (browsers give them min-content). */
+#export-filters fieldset { min-width: 0; }
+#export-filters .regular-text { max-width: 100%; box-sizing: border-box; }
+@media screen and (max-width: 782px) {
+	/* A whole row to tap, 40px high, the box as core draws it. */
+	#export-filters label:has(> input[type="checkbox"]),
+	#export-filters label:has(> input[type="radio"]) {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-height: 40px;
+		line-height: 1.4;
+	}
+	#export-filters label > input[type="checkbox"],
+	#export-filters label > input[type="radio"] { flex-shrink: 0; margin: 0; }
+	#export-filters label + br { display: none; }
+	/* Nested blocks keep a small indent. */
+	#eizport-bundle-options,
+	#eizport-blueprint-options,
+	#export-filters .description[style*="margin-left"] { margin-left: 0.75em !important; }
+	#export-filters .eizport-checklist,
+	#export-filters .eizport-checklist-items { max-width: 100%; box-sizing: border-box; line-height: 1.4; }
+	#eizport-extension { display: inline-block; margin-top: 4px; }
+	#export-filters code { overflow-wrap: anywhere; }
+}

@@ -6,6 +6,10 @@
  *   $routes, $page_slug…) run inside a static closure, so nothing leaks into
  *   the global scope. Files that `return` a value (registries, constants,
  *   *.asset.php) are left as they are.
+ * - A page's render function prints no <style>: its critical styles go
+ *   with wp_add_inline_style() on the page's prerequisites stylesheet,
+ *   which the page's enqueue function already loads (WordPress.org asks
+ *   for enqueued styles).
  * - The full-page mode (pages/<id>/page.php) is removed: the plugin only uses
  *   the "-wp-admin" mode, and pages.php loads page.php only if it exists.
  * - build/modules/boot/index.min.asset.php is written: wp-build 0.19's page
@@ -83,6 +87,23 @@ for ( const file of phpFiles( BUILD ) ) {
 		/^(\s*\$GLOBALS\[ \$[a-z_]+ \] = [^;]+;)$/gm,
 		'$1 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- the name is built with the plugin prefix.'
 	);
+
+	// The render function's <style>, enqueued instead.
+	const style = body.match( /\n\t<style>\n([\s\S]*?)\n\t<\/style>\n/ );
+	const prerequisites = body.match( /\n(\t+)wp_enqueue_style\( '([a-z0-9-]+-prerequisites)' \);\n/ );
+	if ( style && prerequisites ) {
+		const [ , indent, handle ] = prerequisites;
+		const css = style[ 1 ]
+			.split( '\n' )
+			.map( ( line ) => line.replace( /^\t\t/, '' ) )
+			.join( '\n' )
+			.trim()
+			.replace( /\\/g, '\\\\' )
+			.replace( /'/g, "\\'" );
+		body = body
+			.replace( style[ 0 ], '\n' )
+			.replace( prerequisites[ 0 ], `${ prerequisites[ 0 ] }${ indent }wp_add_inline_style(\n${ indent }\t'${ handle }',\n${ indent }\t'${ css.replace( /\n(?=.)/g, `\n${ indent }\t` ) }'\n${ indent });\n` );
+	}
 
 	php = head + body;
 	if ( php !== original ) {

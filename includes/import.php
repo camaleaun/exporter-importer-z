@@ -59,7 +59,9 @@ function bootstrap() {
 	add_action( 'import_start', __NAMESPACE__ . '\serve_bundle' );
 	add_action( 'load-importer-wordpress', __NAMESPACE__ . '\mention_wxrz' );
 	add_action( 'load-import.php', __NAMESPACE__ . '\open_wordpress_importer' );
-	add_action( 'admin_print_footer_scripts', __NAMESPACE__ . '\check_fetch_attachments' );
+	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\register_steps_script' );
+	// Before the footer scripts are printed (priority 10).
+	add_action( 'admin_print_footer_scripts', __NAMESPACE__ . '\check_fetch_attachments', 5 );
 	add_filter( 'plugin_action_links_' . plugin_basename( dirname( __DIR__ ) . '/eizport.php' ), __NAMESPACE__ . '\action_links' );
 }
 
@@ -622,7 +624,11 @@ function delete_bundle( $attachment_id ) {
 function serve_bundle() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- the importer checked its nonce.
 	$import_id = isset( $_POST['import_id'] ) ? absint( $_POST['import_id'] ) : 0;
-	$dir       = $import_id ? get_post_meta( $import_id, Bundle\DIR_META, true ) : '';
+	if ( ! $import_id ) {
+		// Not the importer's screen: import_file() (abilities, WP-CLI, a bundle plugin) sets these up itself.
+		return;
+	}
+	$dir = get_post_meta( $import_id, Bundle\DIR_META, true );
 
 	if ( $dir && is_dir( $dir ) ) {
 		Bundle\serve_files( $dir );
@@ -634,37 +640,47 @@ function serve_bundle() {
 }
 
 /**
+ * Registers assets/import-steps.js, which step 1's additions below fill
+ * with data. They are known only once the importer has the file, while the
+ * page is printed, so they enqueue it from the footer, before the footer
+ * scripts are printed; importer.js depends on it (style()), so it runs
+ * first.
+ */
+function register_steps_script() {
+	$file = dirname( __DIR__ ) . '/assets/import-steps.js';
+	wp_register_script( 'eizport-import-steps', plugins_url( 'assets/import-steps.js', dirname( __DIR__ ) . '/eizport.php' ), array(), (string) filemtime( $file ), array( 'in_footer' => true ) );
+}
+
+/**
+ * Enqueues assets/import-steps.js with one more piece of its data.
+ *
+ * @param string $key   Key in window.eizportImportSteps.
+ * @param mixed  $value Its value.
+ */
+function steps_script( $key, $value ) {
+	wp_enqueue_script( 'eizport-import-steps' );
+	wp_add_inline_script(
+		'eizport-import-steps',
+		sprintf( 'window.eizportImportSteps = Object.assign( window.eizportImportSteps || {}, %s );', wp_json_encode( array( $key => $value ) ) ),
+		'before'
+	);
+}
+
+/**
  * Step 1: "Update items that already exist", checked when the bundle asks
- * (it was exported with "Update existing items on import"). Added before
- * importer.js gathers the steps in cards.
+ * (it was exported with "Update existing items on import").
  */
 function update_existing_field() {
-	$dir     = $GLOBALS['eizport_bundle_import_id'] ? (string) get_post_meta( $GLOBALS['eizport_bundle_import_id'], Bundle\DIR_META, true ) : '';
-	$checked = bundle_updates_existing( $dir );
-	?>
-	<script>
-		( function () {
-			var form = document.querySelector( 'form[action*="step=2"]' );
-			var submit = form && form.querySelector( 'p.submit' );
-			if ( ! submit ) {
-				return;
-			}
-			var heading = document.createElement( 'h3' );
-			heading.textContent = <?php echo wp_json_encode( __( 'Existing items', 'eizport' ) ); ?>;
-			var field = document.createElement( 'p' );
-			var label = document.createElement( 'label' );
-			var box = document.createElement( 'input' );
-			box.type = 'checkbox';
-			box.name = <?php echo wp_json_encode( UPDATE_FIELD ); ?>;
-			box.value = '1';
-			box.checked = <?php echo $checked ? 'true' : 'false'; ?>;
-			label.append( box, ' ' + <?php echo wp_json_encode( __( 'Update pages, posts and products that already exist (same slug) instead of adding copies', 'eizport' ) ); ?> );
-			field.append( label );
-			form.insertBefore( heading, submit );
-			form.insertBefore( field, submit );
-		} )();
-	</script>
-	<?php
+	$dir = $GLOBALS['eizport_bundle_import_id'] ? (string) get_post_meta( $GLOBALS['eizport_bundle_import_id'], Bundle\DIR_META, true ) : '';
+	steps_script(
+		'updateExisting',
+		array(
+			'name'    => UPDATE_FIELD,
+			'checked' => bundle_updates_existing( $dir ),
+			'heading' => __( 'Existing items', 'eizport' ),
+			'label'   => __( 'Update pages, posts and products that already exist (same slug) instead of adding copies', 'eizport' ),
+		)
+	);
 }
 
 /**
@@ -672,20 +688,9 @@ function update_existing_field() {
  * since the files are in the bundle and nothing is downloaded.
  */
 function check_fetch_attachments() {
-	if ( ! $GLOBALS['eizport_bundle_import_id'] ) {
-		return;
+	if ( $GLOBALS['eizport_bundle_import_id'] ) {
+		steps_script( 'importId', (int) $GLOBALS['eizport_bundle_import_id'] );
 	}
-	?>
-	<script>
-		( function () {
-			var importId = document.querySelector( 'input[name="import_id"]' );
-			var fetch = document.getElementById( 'import-attachments' );
-			if ( importId && fetch && <?php echo (int) $GLOBALS['eizport_bundle_import_id']; ?> === parseInt( importId.value, 10 ) ) {
-				fetch.checked = true;
-			}
-		} )();
-	</script>
-	<?php
 }
 
 /**
@@ -698,7 +703,7 @@ function check_fetch_attachments() {
 function is_importer_upload( $file ) {
 	// phpcs:disable WordPress.Security.NonceVerification -- the importer checks its own nonce.
 	return isset( $_GET['import'], $_FILES['import']['tmp_name'] )
-		&& IMPORTER_ID === $_GET['import']
+		&& IMPORTER_ID === sanitize_key( wp_unslash( $_GET['import'] ) )
 		&& $_FILES['import']['tmp_name'] === $file['tmp_name']
 		&& current_user_can( 'import' );
 	// phpcs:enable
@@ -817,7 +822,7 @@ function style() {
 	$base = plugins_url( 'assets/', dirname( __DIR__ ) . '/eizport.php' );
 	$dir  = dirname( __DIR__ ) . '/assets/';
 	wp_enqueue_style( 'eizport-importer', $base . 'importer.css', array(), (string) filemtime( $dir . 'importer.css' ) );
-	wp_enqueue_script( 'eizport-importer', $base . 'importer.js', array(), (string) filemtime( $dir . 'importer.js' ), array( 'in_footer' => true ) );
+	wp_enqueue_script( 'eizport-importer', $base . 'importer.js', array( 'eizport-import-steps' ), (string) filemtime( $dir . 'importer.js' ), array( 'in_footer' => true ) );
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only picks the step.
 	$step  = isset( $_GET['step'] ) ? absint( $_GET['step'] ) : 0;
 	$texts = array(
@@ -842,4 +847,3 @@ function style() {
 	);
 	wp_add_inline_script( 'eizport-importer', 'window.eizportImporter = ' . wp_json_encode( $texts ) . ';', 'before' );
 }
-

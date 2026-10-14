@@ -66,7 +66,10 @@ class ExportImportTest extends Test_Case {
 		$this->assertTrue( $args['media'] );
 		$this->assertTrue( $args['post_content'], 'The Playground .zip takes content files too.' );
 		$this->assertTrue( $args['blueprint'] );
-		$this->assertTrue( $args['keep_copy'] );
+		$this->assertFalse( $args['keep_copy'], 'A copy is written to disk only with the form\'s nonce.' );
+
+		$_GET[ Export\KEEP_NONCE ] = wp_create_nonce( Export\KEEP_FIELD );
+		$this->assertTrue( Export\file_args( array() )['keep_copy'] );
 
 		unset( $_GET['eizport_blueprint'] );
 		$this->assertTrue( Export\file_args( array() )['post_content'] );

@@ -208,7 +208,7 @@ defined( 'ABSPATH' ) || exit;
 		'admin_notices',
 		static function () use ( $slug, $page, $title ) {
 			$imported = (array) get_option( 'eizport_bundle_plugins_imported', array() );
-			if ( ! current_user_can( 'import' ) || isset( $imported[ $slug ] ) || ( isset( $_GET['page'] ) && $page === $_GET['page'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only picks the screen.
+			if ( ! current_user_can( 'import' ) || isset( $imported[ $slug ] ) || ( isset( $_GET['page'] ) && $page === sanitize_text_field( wp_unslash( $_GET['page'] ) ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only picks the screen.
 				return;
 			}
 			echo '<div class="notice notice-info"><p>' . esc_html( $title ) . ': <a href="' . esc_url( admin_url( 'tools.php?page=' . $page ) ) . '">' . esc_html( __( 'open the import screen', 'EIZPORT_TEXT_DOMAIN' ) ) . '</a></p></div>';

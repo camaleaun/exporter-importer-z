@@ -96,17 +96,18 @@ function plugin_content_choices() {
  */
 function defaults() {
 	return array(
-		'copy_lifetime'  => DAY_IN_SECONDS,
-		'replace_export' => true,
-		'classic_ui'     => false,
-		'style_import'   => true,
-		'import_direct'  => true,
-		'content_files'  => true,
-		'attached_only'  => false,
-		'bundle_zip'     => false,
-		'plugin_content' => 'wxrz',
-		'defaults_scope' => 'user',
-		'linked_options' => 'both',
+		'copy_lifetime'       => DAY_IN_SECONDS,
+		'replace_export'      => true,
+		'classic_ui'          => false,
+		'style_import'        => true,
+		'import_direct'       => true,
+		'content_files'       => true,
+		'attached_only'       => false,
+		'bundle_zip'          => false,
+		'plugin_content'      => 'wxrz',
+		'plugin_import_again' => false,
+		'defaults_scope'      => 'user',
+		'linked_options'      => 'both',
 	);
 }
 
@@ -135,17 +136,18 @@ function sanitize( $value ) {
 	$content  = isset( $value['plugin_content'] ) ? (string) $value['plugin_content'] : '';
 
 	return array(
-		'copy_lifetime'  => isset( lifetime_choices()[ $lifetime ] ) ? $lifetime : $defaults['copy_lifetime'],
-		'replace_export' => array_key_exists( 'replace_export', $value ) ? ! empty( $value['replace_export'] ) : $defaults['replace_export'],
-		'classic_ui'     => ! empty( $value['classic_ui'] ),
-		'style_import'   => array_key_exists( 'style_import', $value ) ? ! empty( $value['style_import'] ) : $defaults['style_import'],
-		'import_direct'  => array_key_exists( 'import_direct', $value ) ? ! empty( $value['import_direct'] ) : $defaults['import_direct'],
-		'content_files'  => array_key_exists( 'content_files', $value ) ? ! empty( $value['content_files'] ) : $defaults['content_files'],
-		'attached_only'  => ! empty( $value['attached_only'] ),
-		'bundle_zip'     => ! empty( $value['bundle_zip'] ),
-		'plugin_content' => isset( plugin_content_choices()[ $content ] ) ? $content : $defaults['plugin_content'],
-		'defaults_scope' => isset( defaults_scope_choices()[ $scope ] ) ? $scope : $defaults['defaults_scope'],
-		'linked_options' => isset( linked_options_choices()[ $linked ] ) ? $linked : $defaults['linked_options'],
+		'copy_lifetime'       => isset( lifetime_choices()[ $lifetime ] ) ? $lifetime : $defaults['copy_lifetime'],
+		'replace_export'      => array_key_exists( 'replace_export', $value ) ? ! empty( $value['replace_export'] ) : $defaults['replace_export'],
+		'classic_ui'          => ! empty( $value['classic_ui'] ),
+		'style_import'        => array_key_exists( 'style_import', $value ) ? ! empty( $value['style_import'] ) : $defaults['style_import'],
+		'import_direct'       => array_key_exists( 'import_direct', $value ) ? ! empty( $value['import_direct'] ) : $defaults['import_direct'],
+		'content_files'       => array_key_exists( 'content_files', $value ) ? ! empty( $value['content_files'] ) : $defaults['content_files'],
+		'attached_only'       => ! empty( $value['attached_only'] ),
+		'bundle_zip'          => ! empty( $value['bundle_zip'] ),
+		'plugin_content'      => isset( plugin_content_choices()[ $content ] ) ? $content : $defaults['plugin_content'],
+		'plugin_import_again' => ! empty( $value['plugin_import_again'] ),
+		'defaults_scope'      => isset( defaults_scope_choices()[ $scope ] ) ? $scope : $defaults['defaults_scope'],
+		'linked_options'      => isset( linked_options_choices()[ $linked ] ) ? $linked : $defaults['linked_options'],
 	);
 }
 
@@ -180,7 +182,7 @@ function register() {
 		OPTION,
 		array(
 			'type'              => 'array',
-			'sanitize_callback' => __NAMESPACE__ . '\sanitize',
+			'sanitize_callback' => 'Eizport\Settings\sanitize', // Each field checked against its allowed values.
 			'default'           => defaults(),
 		)
 	);
@@ -230,7 +232,7 @@ function add_page() {
  */
 function submenu_file( $submenu_file ) {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only picks the menu item.
-	return isset( $_GET['page'] ) && SLUG === $_GET['page'] ? 'plugins.php' : $submenu_file;
+	return isset( $_GET['page'] ) && SLUG === sanitize_key( wp_unslash( $_GET['page'] ) ) ? 'plugins.php' : $submenu_file;
 }
 
 /**

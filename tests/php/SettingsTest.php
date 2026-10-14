@@ -58,6 +58,8 @@ class SettingsTest extends Test_Case {
 		$this->assertSame( 'user', Settings\sanitize( array( 'defaults_scope' => 'everyone' ) )['defaults_scope'] );
 		$this->assertSame( 'export', Settings\sanitize( array( 'linked_options' => 'export' ) )['linked_options'] );
 		$this->assertSame( 'both', Settings\sanitize( array( 'linked_options' => 'sometimes' ) )['linked_options'] );
+		$this->assertFalse( Settings\sanitize( array() )['plugin_import_again'], 'A plugin export doesn\'t offer Import again by default.' );
+		$this->assertTrue( Settings\sanitize( array( 'plugin_import_again' => '1' ) )['plugin_import_again'], 'The setting is kept when saved.' );
 
 		$this->stored( array( 'copy_lifetime' => HOUR_IN_SECONDS ) );
 		$this->assertSame( HOUR_IN_SECONDS, Copies\lifetime() );

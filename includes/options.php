@@ -450,28 +450,5 @@ function render() {
 		</p>
 		<p class="description"><?php esc_html_e( 'Pages, media and other items the settings point to get their new IDs on import; settings pointing to items not exported are left out. Site URLs, the admin email, keys, active plugins, roles, who may register and transients are never exported, nor set by an import.', 'eizport' ); ?></p>
 	</fieldset>
-	<script>
-		( function () {
-			// The homepage choice shows only when the homepage or the posts page can be in the export.
-			var front = document.getElementById( 'eizport-front-pages' );
-			var form = front && front.closest( 'form' );
-			if ( ! form ) {
-				return;
-			}
-			var pages = JSON.parse( front.dataset.pages );
-			function update() {
-				var content = form.querySelector( 'input[name="content"]:checked' );
-				var mode = form.querySelector( 'input[name="eizport_mode[page]"]:checked' );
-				var visible = ! content || content.value === 'all' || ( content.value === 'pages' && ( ! mode || mode.value === 'filters' || pages.some( function ( id ) {
-					var box = form.querySelector( 'input[name="eizport_ids[page][]"][value="' + id + '"]' );
-					return box && box.checked;
-				} ) ) );
-				front.hidden = ! visible;
-				front.querySelector( 'input' ).disabled = ! visible;
-			}
-			form.addEventListener( 'change', update );
-			update();
-		} )();
-	</script>
 	<?php
 }
