@@ -34,9 +34,12 @@ package_plugin() {
 
 create_site() {
 	local path="$1" name="$2" with_plugin="${3:-yes}"
+	# Studio's list names it after the project; the site's own title (blogname, seen in the video) stays "$name".
+	local studio_name="Eizport demo: $name"
 	if [ ! -f "$path/wp-config.php" ]; then
-		studio site create --path "$path" --name "$name" --skip-browser
+		studio site create --path "$path" --name "$studio_name" --skip-browser
 	else
+		studio site set --path "$path" --name "$studio_name" >/dev/null
 		studio site start --path "$path" --skip-browser >/dev/null 2>&1 || true
 	fi
 	# A fresh copy of the plugin each time (none on the client: the video installs it).
