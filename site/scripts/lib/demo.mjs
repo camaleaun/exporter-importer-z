@@ -5,7 +5,7 @@
  * browser download is needed.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
@@ -39,9 +39,9 @@ for ( const site of Object.values( sites ) ) {
 	site.wp = ( ...args ) => studio( site.path, ...args );
 }
 
-// The labels the steps look for, in the admin's language: from the .po files
-// of WordPress, the importer and the plugin (in the language's repository),
-// plus the few WordPress keeps in its scripts' JSON, listed in that
+// The labels the steps look for, in the admin's language: from the language
+// packs of WordPress, the importer and the plugin (its screens' strings are in
+// the pack's .json files), plus the few WordPress keeps in its scripts' JSON, listed in that
 // repository's labels.json ({ "Actions": "…" }).
 let labels = {};
 // The browser's language (native controls, Accept-Language), set by useLocale().
@@ -65,6 +65,14 @@ const readPo = ( file ) => {
 	return entries;
 };
 
+/** Reads a script translation .json (a language pack's): msgid → msgstr. */
+const readJed = ( file ) =>
+	Object.fromEntries(
+		Object.entries( JSON.parse( readFileSync( file, 'utf8' ) ).locale_data.messages )
+			.filter( ( [ id ] ) => id )
+			.map( ( [ id, [ str ] ] ) => [ id, str ] )
+	);
+
 /** A label as the admin shows it (the English text until useLocale()). */
 export const l = ( text ) => labels[ text ] ?? text;
 
@@ -73,8 +81,8 @@ export const l = ( text ) => labels[ text ] ?? text;
  * importer language packs (installed when missing), the plugin's .mo (npm run
  * plugin-languages), the admin user's locale, the site language (WPLANG) and
  * the browser's (launch(), inLocale()). `wp` is the WordPress
- * locale ("pt_BR"), `repo` the language's repository (for the plugin's
- * labels); "en_US" goes back to English.
+ * locale ("pt_BR"), `repo` the language's repository (for labels.json);
+ * "en_US" goes back to English.
  */
 export function useLocale( wp, repo = '' ) {
 	for ( const site of Object.values( sites ) ) {
@@ -100,16 +108,14 @@ export function useLocale( wp, repo = '' ) {
 		site.wp( 'eval', `switch_to_locale( '${ wp }' ); update_option( 'date_format', __( 'F j, Y' ) );` );
 	}
 	browserLocale = wp === 'en_US' ? undefined : wp.replace( '_', '-' );
-	// WordPress's admin and the importer from the demo site's language packs, then the plugin's, then labels.json.
-	const files = [
-		...Object.values( sites ).flatMap( ( site ) => {
-			const lang = join( site.path, 'wp-content/languages' );
-			return [ `${ lang }/admin-${ wp }.po`, `${ lang }/${ wp }.po`, `${ lang }/plugins/wordpress-importer-${ wp }.po` ];
-		} ),
-		join( repo, 'languages', `eizport-${ wp }.po` ),
-	];
+	// WordPress's admin, the importer and the plugin from the demo sites' language packs, then labels.json.
+	const files = Object.values( sites ).flatMap( ( site ) => {
+		const lang = join( site.path, 'wp-content/languages' );
+		const scripts = existsSync( `${ lang }/plugins` ) ? readdirSync( `${ lang }/plugins` ).filter( ( file ) => file.startsWith( `eizport-${ wp }-` ) && file.endsWith( '.json' ) ) : [];
+		return [ `${ lang }/admin-${ wp }.po`, `${ lang }/${ wp }.po`, `${ lang }/plugins/wordpress-importer-${ wp }.po`, `${ lang }/plugins/eizport-${ wp }.po`, ...scripts.map( ( file ) => `${ lang }/plugins/${ file }` ) ];
+	} );
 	const extra = join( repo, 'labels.json' );
-	labels = wp === 'en_US' ? {} : Object.assign( {}, ...files.filter( existsSync ).map( readPo ), existsSync( extra ) ? JSON.parse( readFileSync( extra, 'utf8' ) ) : {} );
+	labels = wp === 'en_US' ? {} : Object.assign( {}, ...files.filter( existsSync ).map( ( file ) => ( file.endsWith( '.json' ) ? readJed( file ) : readPo( file ) ) ), existsSync( extra ) ? JSON.parse( readFileSync( extra, 'utf8' ) ) : {} );
 }
 
 export const viewports = {

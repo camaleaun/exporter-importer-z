@@ -1,5 +1,5 @@
 {
-	"$comment": "Languages of the site besides English, and the repository with each one's translation (strings.json, docs/, the plugin's languages/<domain>-<wp>.po and screenshots). scripts/translations.mjs downloads them at build time into git-ignored folders: translated text never lives in this repository.",
+	"$comment": "Languages of the site besides English, and the repository with each one's translation (strings.json, docs/ and screenshots; the plugin's own translation is its translate.wordpress.org language pack, npm run plugin-languages). scripts/translations.mjs downloads them at build time into git-ignored folders: translated text never lives in this repository.",
 	"default": { "code": "en", "lang": "en", "og": "en_US", "label": "English" },
 	"locales": [
 		{
