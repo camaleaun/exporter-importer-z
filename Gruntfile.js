@@ -7,7 +7,7 @@
  * @param {Object} grunt Grunt.
  */
 const BLUEPRINT_URL =
-	'https://raw.githubusercontent.com/eizport/eizport/main/playground/blueprint.json';
+	'https://raw.githubusercontent.com/eizport/eizport/trunk/playground/blueprint.json';
 const PLAYGROUND_BADGE =
 	'[![Open in WordPress Playground](https://img.shields.io/badge/Open_in-WordPress_Playground-3858e9?logo=wordpress)](https://playground.wordpress.net/?blueprint-url=' +
 	BLUEPRINT_URL +
@@ -24,7 +24,7 @@ module.exports = function ( grunt ) {
 				},
 				options: {
 					// The WordPress.org screenshots, from the repo until the plugin has its directory page.
-					screenshot_url: 'https://raw.githubusercontent.com/eizport/eizport/main/.wordpress-org/{screenshot}.png',
+					screenshot_url: 'https://raw.githubusercontent.com/eizport/eizport/trunk/.wordpress-org/{screenshot}.png',
 					post_convert( readme ) {
 						return readme.replace( /^(# .+ #\n)/, '$1\n' + PLAYGROUND_BADGE + ' ' + DOCS_BADGE + '\n\n' );
 					},

@@ -29,8 +29,8 @@ export const site = {
 	releases: `${ repo }/releases`,
 	download: `${ repo }/releases/latest/download/eizport.zip`,
 	issues: `${ repo }/issues`,
-	editBase: `${ repo }/edit/main/site/src/content/docs/`,
-	demo: 'https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/eizport/eizport/main/playground/blueprint.json',
+	editBase: `${ repo }/edit/trunk/site/src/content/docs/`,
+	demo: 'https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/eizport/eizport/trunk/playground/blueprint.json',
 };
 
 /** A path inside the site, with the base (empty on eizport.github.io; kept so the site can move under a path). */

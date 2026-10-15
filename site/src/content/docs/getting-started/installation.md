@@ -17,7 +17,7 @@ wp plugin install https://github.com/eizport/eizport/releases/latest/download/ei
 
 ## Try it first
 
-Open the [live demo in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/eizport/eizport/main/playground/blueprint.json): a throwaway site in your browser with the plugin and sample pages.
+Open the [live demo in WordPress Playground](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/eizport/eizport/trunk/playground/blueprint.json): a throwaway site in your browser with the plugin and sample pages.
 
 ## To import
 

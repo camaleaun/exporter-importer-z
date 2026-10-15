@@ -27,7 +27,7 @@
 			"path": "/tmp/eizport-demo/demo-image.jpg",
 			"data": {
 				"resource": "url",
-				"url": "https://raw.githubusercontent.com/eizport/eizport/main/playground/demo-image.jpg"
+				"url": "https://raw.githubusercontent.com/eizport/eizport/trunk/playground/demo-image.jpg"
 			}
 		},
 		{

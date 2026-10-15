@@ -6,7 +6,7 @@ name: Site
 # SITE_DEPLOY_KEY secret. Edit the site here, never there.
 #
 # The site shows the released plugin: it is built from the "latest" tag,
-# which a release moves (bin/release.php), never from main, where docs of
+# which a release moves (bin/release.php), never from trunk, where docs of
 # unreleased changes wait. A release publishes it; so can a run by hand,
 # from another ref when asked.
 #

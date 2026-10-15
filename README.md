@@ -1,6 +1,6 @@
 # Eizport #
 
-[![Open in WordPress Playground](https://img.shields.io/badge/Open_in-WordPress_Playground-3858e9?logo=wordpress)](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/eizport/eizport/main/playground/blueprint.json) [![Docs](https://img.shields.io/badge/Docs-eizport.github.io-1d35b4)](https://eizport.github.io/)
+[![Open in WordPress Playground](https://img.shields.io/badge/Open_in-WordPress_Playground-3858e9?logo=wordpress)](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/eizport/eizport/trunk/playground/blueprint.json) [![Docs](https://img.shields.io/badge/Docs-eizport.github.io-1d35b4)](https://eizport.github.io/)
 
 **Contributors:** [eizport](https://profiles.wordpress.org/eizport/), [camaleaun](https://profiles.wordpress.org/camaleaun/)  
 **Donate link:** https://eizport.github.io/donate/  
@@ -159,22 +159,22 @@ The PHP is in the plugin, readable. The Export and Settings screens' JavaScript 
 ## Screenshots ##
 
 ### 1. Tools → Export: choose content types or exact items; the products and settings they use are suggested. ###
-![Tools → Export: choose content types or exact items; the products and settings they use are suggested.](https://raw.githubusercontent.com/eizport/eizport/main/.wordpress-org/screenshot-1.png)
+![Tools → Export: choose content types or exact items; the products and settings they use are suggested.](https://raw.githubusercontent.com/eizport/eizport/trunk/.wordpress-org/screenshot-1.png)
 
 ### 2. Pick the exact items to export; the homepage, shop and checkout wear badges. ###
-![Pick the exact items to export; the homepage, shop and checkout wear badges.](https://raw.githubusercontent.com/eizport/eizport/main/.wordpress-org/screenshot-2.png)
+![Pick the exact items to export; the homepage, shop and checkout wear badges.](https://raw.githubusercontent.com/eizport/eizport/trunk/.wordpress-org/screenshot-2.png)
 
 ### 3. Settings travel too: the ones your pages point to are suggested; add any other one by one. ###
-![Settings travel too: the ones your pages point to are suggested; add any other one by one.](https://raw.githubusercontent.com/eizport/eizport/main/.wordpress-org/screenshot-3.png)
+![Settings travel too: the ones your pages point to are suggested; add any other one by one.](https://raw.githubusercontent.com/eizport/eizport/trunk/.wordpress-org/screenshot-3.png)
 
 ### 4. Export a WordPress Playground .zip with the theme and plugins you choose. ###
-![Export a WordPress Playground .zip with the theme and plugins you choose.](https://raw.githubusercontent.com/eizport/eizport/main/.wordpress-org/screenshot-4.png)
+![Export a WordPress Playground .zip with the theme and plugins you choose.](https://raw.githubusercontent.com/eizport/eizport/trunk/.wordpress-org/screenshot-4.png)
 
 ### 5. Set it once: media, linked settings, .zip bundles and saved defaults. ###
-![Set it once: media, linked settings, .zip bundles and saved defaults.](https://raw.githubusercontent.com/eizport/eizport/main/.wordpress-org/screenshot-5.png)
+![Set it once: media, linked settings, .zip bundles and saved defaults.](https://raw.githubusercontent.com/eizport/eizport/trunk/.wordpress-org/screenshot-5.png)
 
 ### 6. Every export is kept as a private copy for a while: download it again, open it in Playground or import it. ###
-![Every export is kept as a private copy for a while: download it again, open it in Playground or import it.](https://raw.githubusercontent.com/eizport/eizport/main/.wordpress-org/screenshot-6.png)
+![Every export is kept as a private copy for a while: download it again, open it in Playground or import it.](https://raw.githubusercontent.com/eizport/eizport/trunk/.wordpress-org/screenshot-6.png)
 
 
 ## Upgrade Notice ##
