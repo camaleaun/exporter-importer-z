@@ -20,7 +20,7 @@ const COLORS = {
 	accent: '#f2994a',
 	ink: '#1e1e1e',
 	muted: '#50575e',
-	paper: '#ffffff',
+	paper: '#fff',
 	night: '#0f1115',
 	onNight: '#f0f0f1',
 };
@@ -41,8 +41,11 @@ const markStrokes = ( top = COLORS.paper, bottom = COLORS.accent ) =>
 	`<g fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path stroke="${ top }" d="M20 14 14 20l6 6M14 20h32L18 44"/><path stroke="${ bottom }" d="M18 44h32m-6-6 6 6-6 6"/></g>`;
 
 /** The mark at a position and size, on its rounded square. */
-const mark = ( x, y, size, background = COLORS.primary ) =>
-	`<g transform="translate(${ x } ${ y }) scale(${ size / 64 })"><rect width="64" height="64" rx="14" fill="${ background }"/>${ markStrokes() }</g>`;
+const mark = ( x, y, size, background = COLORS.primary ) => {
+	const body = `<rect width="64" height="64" rx="14" fill="${ background }"/>${ markStrokes() }`;
+	// At the origin and native size the transform is a no-op: leave it out.
+	return x || y || 64 !== size ? `<g transform="translate(${ x } ${ y }) scale(${ size / 64 })">${ body }</g>` : body;
+};
 
 /** Text as an outline path, with its advance width. */
 const outline = ( text, f, size, x, y, fill ) => {
